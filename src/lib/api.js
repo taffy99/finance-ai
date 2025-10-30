@@ -1,7 +1,7 @@
 // 市场数据和策略计算的API接口实现
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 // 创建axios实例
 const apiClient = axios.create({

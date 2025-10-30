@@ -8,6 +8,7 @@ import Budget from "../views/Budget.vue"
 import Investments from "../views/Investments.vue"
 import Reports from "../views/Reports.vue"
 import AiAssistant from "../views/AiAssistant.vue"
+import AiEftAnalyzer from "../views/AiEftAnalyzer.vue"
 import Settings from "../views/Settings.vue"
 import FundStrategy from "../components/FundStrategy.vue"
 import MultiStrategy from "../components/MultiStrategy.vue"
@@ -50,6 +51,11 @@ const routes = [
         path: 'ai-assistant', // AI助手
         name: 'aiAssistant',
         component: AiAssistant
+      },
+      {
+        path: 'ai-eft-analyzer', // AI ETF 分析器
+        name: 'aiEftAnalyzer',
+        component: AiEftAnalyzer
       },
       {
         path: 'settings', // 设置

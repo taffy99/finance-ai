@@ -11,7 +11,7 @@
   - 示例：`src/components/ChartComponent.vue` 展示了图表组件的标准实现。
 
 - 后端与集成点：
-  - Supabase 客户端：`src/lib/supabase.js`（通过 Vite 环境变量 `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` 配置）。
+  - Supabase 客户端：`src/lib/supabase.js`（  通过 Vite 环境变量 `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` 配置）。
   - 组合式封装：`src/composables/useSupabase.js`（示例：`useProducts()`，在 `src/views/Investments.vue` 中被调用）。
   - 本地 serverless 示例：`vercel-serverless-demo/api/*.js` 和 `vercel-serverless-demo/db/index.js`（可参考实现小型 API 与事务逻辑）。
 
@@ -35,8 +35,6 @@
   - SFC 使用 `<script setup>`。优先用组合式 API（composables）封装可复用逻辑。
   - 组件命名以 PascalCase（例如 `InvestDetailModal.vue`），路由路径以 kebab 或小写字符串声明。
   - 数据访问通过 `composables` -> `src/lib/supabase.js`。避免在组件中直接创建 supabase 客户端。
-  - 状态管理：虽然已引入 Pinia，但目前主要使用 composables 管理状态。如需添加全局状态，建议在 `src/stores/` 下创建 store。
-  - Assets：静态资源存放在 `src/assets/` 目录，通过相对路径引用。
 
 - 注意事项 / 限制：
   - 环境变量：本地 `.env.local` 包含 Supabase 配置；不要在提交或返回内容时泄露真实密钥。AI 若需示例，可使用 placeholder（例如 `VITE_SUPABASE_URL=https://<your-project>.supabase.co`）。
