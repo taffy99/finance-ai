@@ -6,7 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000
 // 创建axios实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 100000,
   headers: {
     'Content-Type': 'application/json',
   }
@@ -42,7 +42,7 @@ export const MarketAPI = {
    * 获取支持的市场列表
    */
   getMarkets() {
-    return apiClient.get('/markets');
+    return apiClient.get('/fund_individual_basic_info_xq');
   },
 
   /**
@@ -52,11 +52,9 @@ export const MarketAPI = {
    * @param {string} endDate - 结束日期 (YYYY-MM)
    * @param {string} interval - 数据间隔 (daily|weekly|monthly)
    */
-  getMarketHistory(marketId, startDate, endDate, interval = 'monthly') {
-    return apiClient.get(`/markets/${marketId}/history`, {
-      params: { startDate, endDate, interval }
-    });
-  },
+  getMarketHistory(marketId) {
+    return apiClient.get(`/fund_graded_fund_info_em?symbol=${marketId}`)
+},
 
   /**
    * 获取市场趋势分析

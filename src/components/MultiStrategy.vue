@@ -57,8 +57,8 @@
                        group-hover:border-primary/30"
                 @change="handleMarketChange"
               >
-                <option value="hs300">国内 - 沪深300</option>
                 <option value="000008">国内 - 中证500</option>
+                <option value="110020">国内 - 沪深300</option>
                 <option value="050025">美股 - 标普500</option>
                 <option value="000834">美股 - 纳斯达克100</option>
                 <option value="002963">黄金ETF</option>
@@ -72,34 +72,34 @@
           <div class="group">
             <label class="block text-neutral mb-2 font-medium flex items-center">
               <i class="fa fa-calendar-plus mr-2 text-primary/70"></i>
-            选择开始月份
+            选择开始日期
             </label>
             <div class="relative">
               <MonthPicker
                 v-model="startDate"
-                min="2020-01"
-                max="2024-12"
-                placeholder="选择开始月份"
+                :min="minDate"
+                :max="endDate"
+                placeholder="选择开始日期"
               />
             </div>
-            <p class="mt-1.5 text-xs text-neutral/70">可选范围：2020-01 至 2024-12</p>
+            <p class="mt-1.5 text-xs text-neutral/70">可选范围：{{ minDate.slice(0,7) }} 至 {{ maxDate.slice(0,7) }}</p>
           </div>
           
           <!-- 结束时间 -->
           <div class="group">
             <label class="block text-neutral mb-2 font-medium flex items-center">
               <i class="fa fa-calendar-minus mr-2 text-primary/70"></i>
-              选择结束月份
+              选择结束日期
             </label>
             <div class="relative">
               <MonthPicker
                 v-model="endDate"
-                min="2020-01"
-                max="2024-12"
-                placeholder="选择结束月份"
+                :min="minDate"
+                :max="maxDate"
+                placeholder="选择结束日期"
               />
             </div>
-            <p class="mt-1.5 text-xs text-neutral/70">可选范围：2020-01 至 2024-12</p>
+            <p class="mt-1.5 text-xs text-neutral/70">可选范围：{{ minDate.slice(0,7) }} 至 {{ maxDate.slice(0,7) }}</p>
           </div>
         </div>
         
@@ -837,15 +837,25 @@ import { Chart, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import axios from 'axios';
 import MonthPicker from './MonthPicker.vue';
+import { useMarketAnalysis } from '../composables/useMarketAnalysis.js';
 
 
 // 注册Chart.js组件
 Chart.register(...registerables, annotationPlugin);
 
 // 状态管理
-const selectedMarket = ref('hs300');
-const startDate = ref('2020-01');
-const endDate = ref('2024-12');
+const selectedMarket = ref('000008');
+// 将 startDate 初始值设为当前日期向前 6 个月，格式 YYYY-MM-DD
+const _initialToday = new Date();
+const _sixMonthsAgo = new Date(_initialToday.getFullYear(), _initialToday.getMonth() - 6, _initialToday.getDate());
+const _formatDateYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const startDate = ref(_formatDateYMD(_sixMonthsAgo));
+// endDate 初始为当前日期（YYYY-MM-DD）
+const endDate = ref(_formatDateYMD(_initialToday));
+// 可选范围：近 5 年（minDate）到今天（maxDate）
+const _fiveYearsAgo = new Date(_initialToday.getFullYear() - 5, _initialToday.getMonth(), _initialToday.getDate());
+const minDate = _formatDateYMD(_fiveYearsAgo);
+const maxDate = _formatDateYMD(_initialToday);
 const isLoading = ref(false);
 const showResults = ref(false);
 const lastUpdated = ref('');
@@ -854,8 +864,8 @@ const filteredTrends = ref([]);
 
 // 定投计算器状态
 const monthlyInvestment = ref(1000);
-const calculatorStartDate = ref('2020-01');
-const calculatorEndDate = ref('2024-12');
+const calculatorStartDate = ref('2020-01-01');
+const calculatorEndDate = ref('2024-12-31');
 const selectedStrategy = ref('optimized');
 const showCalculationResults = ref(false);
 const calculationResults = ref({});
@@ -885,35 +895,39 @@ const backtestChart = ref(null);
 const marketTrendCanvas = ref(null);
 const marketTrendChart = ref(null); // Chart 实例
 
+// 从 composable 中获取数据加载方法（useMarketAnalysis 导出一个工厂函数）
+const { fetchMarketData } = useMarketAnalysis();
+
 // 初始化日期
 onMounted(() => {
-  // 设置当前日期作为默认结束日期
+  // 设置默认结束日期为当前日期，格式 YYYY-MM-DD
   const today = new Date();
-  const defaultEndDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
+  const defaultEndDate = _formatDateYMD(today);
   endDate.value = defaultEndDate;
   calculatorEndDate.value = defaultEndDate;
-  
-  // 初始加载市场数据
-  fetchMarketData();
+
+  // 初始加载市场数据，使用组件的选中市场与日期范围
+  fetchMarketData(selectedMarket.value, startDate.value, endDate.value);
 });
 
 // 监听市场变化
-watch(selectedMarket, () => {
-  fetchMarketData();
-});
+// watch(selectedMarket, () => {
+//   fetchMarketData(selectedMarket.value, startDate.value, endDate.value);
+// });
 // 市场类型选项（未在模板中直接使用，保留供将来重构）
 const marketTypes = [
-  { value: 'hs300', label: '国内 - 沪深300' },
+  { value: '110020', label: '易方达沪深300EFT联接A' },
   { value: 'zz500', label: '国内 - 中证500' },
   { value: 'sp500', label: '美股 - 标普500' },
   { value: 'ndx100', label: '美股 - 纳斯达克100' },
   { value: 'gold', label: '黄金ETF' }
 ];
-// 格式化日期
+// 格式化日期（支持 YYYY-MM 和 YYYY-MM-DD）
 const formatDate = (dateString) => {
   if (!dateString) return '';
-  const [year, month] = dateString.split('-');
-  return `${year}.${month}`;
+  const parts = dateString.split('-');
+  if (parts.length >= 3) return `${parts[0]}.${parts[1]}.${parts[2]}`;
+  return `${parts[0]}.${parts[1]}`;
 };
 
 // 获取趋势类型名称
@@ -974,7 +988,7 @@ const formatNumber = (num) => {
 // 处理市场变化
 const handleMarketChange = () => {
   showResults.value = false;
-  fetchMarketData();
+  fetchMarketData(selectedMarket.value, startDate.value, endDate.value);
 };
 
 // 分析市场
@@ -1008,8 +1022,9 @@ const analyzeMarket = () => {
 
 // 过滤趋势数据
 const filterTrendsByDateRange = () => {
-  const start = new Date(startDate.value + '-01');
-  const end = new Date(endDate.value + '-01');
+  // startDate/endDate are full dates (YYYY-MM-DD)
+  const start = new Date(startDate.value);
+  const end = new Date(endDate.value);
   // 防护：没有趋势数据时返回空数组
   if (!currentMarketInfo.value || !Array.isArray(currentMarketInfo.value.trends)) {
     filteredTrends.value = [];
@@ -1017,8 +1032,11 @@ const filterTrendsByDateRange = () => {
   }
 
   filteredTrends.value = currentMarketInfo.value.trends.filter(trend => {
+    // trend.start / trend.end are stored as 'YYYY-MM'
     const trendStart = new Date(trend.start + '-01');
-    const trendEnd = new Date(trend.end + '-01');
+    const tParts = trend.end.split('-').map(Number);
+    // trendEnd set to last millisecond of the trend.end month
+    const trendEnd = new Date(tParts[0], tParts[1], 0, 23, 59, 59, 999);
     // 检查趋势是否与选择的时间范围有重叠
     return trendStart <= end && trendEnd >= start;
   });
@@ -1032,8 +1050,10 @@ const initMarketTrendChart = () => {
   }
   
   // 获取符合时间范围的数据
-  const startIdx = currentMarketInfo.value.labels.indexOf(startDate.value);
-  const endIdx = currentMarketInfo.value.labels.indexOf(endDate.value);
+  const startMonth = (startDate.value || '').slice(0,7);
+  const endMonth = (endDate.value || '').slice(0,7);
+  const startIdx = currentMarketInfo.value.labels.indexOf(startMonth);
+  const endIdx = currentMarketInfo.value.labels.indexOf(endMonth);
   
   if (startIdx === -1 || endIdx === -1) return;
   
@@ -1137,8 +1157,10 @@ const calculateReturns = () => {
   }
   
   // 获取日期范围内的数据
-  const startIdx = currentMarketInfo.value.labels.indexOf(calculatorStartDate.value);
-  const endIdx = currentMarketInfo.value.labels.indexOf(calculatorEndDate.value);
+  const calcStartMonth = (calculatorStartDate.value || '').slice(0,7);
+  const calcEndMonth = (calculatorEndDate.value || '').slice(0,7);
+  const startIdx = currentMarketInfo.value.labels.indexOf(calcStartMonth);
+  const endIdx = currentMarketInfo.value.labels.indexOf(calcEndMonth);
   
   if (startIdx === -1 || endIdx === -1) return;
   
@@ -1265,8 +1287,10 @@ const generateBacktestData = () => {
   }
 
   // 找到回测起止索引
-  const startIdx = currentMarketInfo.value.labels.indexOf(startDate.value);
-  const endIdx = currentMarketInfo.value.labels.indexOf(endDate.value);
+  const startMonth = (startDate.value || '').slice(0,7);
+  const endMonth = (endDate.value || '').slice(0,7);
+  const startIdx = currentMarketInfo.value.labels.indexOf(startMonth);
+  const endIdx = currentMarketInfo.value.labels.indexOf(endMonth);
   if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
     console.warn('无法在市场数据中找到指定的日期范围');
     return;
@@ -1527,40 +1551,40 @@ const initBacktestChart = () => {
 };
 
 // 获取市场数据
-const fetchMarketData = () => {
-  isLoading.value = true;
+// const fetchMarketData = () => {
+//   isLoading.value = true;
   
-  // 实际项目中这里会调用真实API
-  // 这里使用模拟数据
-  setTimeout(() => {
-    // 模拟API请求
-    // axios.get(`/api/market/${selectedMarket.value}`)
-    //   .then(response => {
-    //     currentMarketInfo.value = response.data;
-    //     isLoading.value = false;
+//   // 实际项目中这里会调用真实API
+//   // 这里使用模拟数据
+//   setTimeout(() => {
+//     // 模拟API请求
+//     // axios.get(`/api/market/${selectedMarket.value}`)
+//     //   .then(response => {
+//     //     currentMarketInfo.value = response.data;
+//     //     isLoading.value = false;
         
-    //     // 更新最后更新时间
-    //     const now = new Date();
-    //     lastUpdated.value = now.toLocaleString();
-    //   })
-    //   .catch(error => {
-    //     console.error('获取市场数据失败:', error);
-    //     // 加载本地模拟数据
-    //     currentMarketInfo.value = getMockMarketData(selectedMarket.value);
-    //     isLoading.value = false;
+//     //     // 更新最后更新时间
+//     //     const now = new Date();
+//     //     lastUpdated.value = now.toLocaleString();
+//     //   })
+//     //   .catch(error => {
+//     //     console.error('获取市场数据失败:', error);
+//     //     // 加载本地模拟数据
+//     //     currentMarketInfo.value = getMockMarketData(selectedMarket.value);
+//     //     isLoading.value = false;
         
-    //     // 更新最后更新时间
-    //     const now = new Date();
-    //     lastUpdated.value = now.toLocaleString();
-    //   });
-      // 加载本地模拟数据
-      currentMarketInfo.value = getMockMarketData(selectedMarket.value);
-      isLoading.value = false;
-      // 更新时间戳
-      lastUpdated.value = new Date().toLocaleString();
-  }, 500);
+//     //     // 更新最后更新时间
+//     //     const now = new Date();
+//     //     lastUpdated.value = now.toLocaleString();
+//     //   });
+//       // 加载本地模拟数据
+//       currentMarketInfo.value = getMockMarketData(selectedMarket.value);
+//       isLoading.value = false;
+//       // 更新时间戳
+//       lastUpdated.value = new Date().toLocaleString();
+//   }, 500);
    
-};
+// };
 
 // 模拟市场数据
 const getMockMarketData = (marketId) => {
