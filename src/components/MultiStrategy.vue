@@ -859,7 +859,24 @@ const maxDate = _formatDateYMD(_initialToday);
 const isLoading = ref(false);
 const showResults = ref(false);
 const lastUpdated = ref('');
-const currentMarketInfo = ref({});
+const currentMarketInfo = ref({
+  name: '',
+  fullName: '',
+  labels: [],
+  data: [],
+  trends: [],
+  indicators: {
+    macro: { labels: [], values: [], trends: [] },
+    market: { labels: [], values: [], trends: [] },
+    sentiment: { labels: [], values: [], trends: [] }
+  },
+  strategy: {
+    bull: { title: '', period: '', core: '', points: [], performance: {} },
+    bear: { title: '', period: '', core: '', points: [], performance: {} },
+    volatile: { title: '', period: '', core: '', points: [], performance: {} }
+  },
+  backtest: {}
+});
 const filteredTrends = ref([]);
 
 // 定投计算器状态
@@ -898,6 +915,66 @@ const marketTrendChart = ref(null); // Chart 实例
 // 从 composable 中获取数据加载方法（useMarketAnalysis 导出一个工厂函数）
 const { fetchMarketData } = useMarketAnalysis();
 
+// 将 API 返回的数据与组件期望的结构合并，填充默认值以避免模板访问时出错
+const normalizeMarketInfo = (res) => {
+  const defaults = {
+    name: '',
+    fullName: '',
+    labels: [],
+    data: [],
+    trends: [],
+    indicators: {
+      macro: { labels: [], values: [], trends: [] },
+      market: { labels: [], values: [], trends: [] },
+      sentiment: { labels: [], values: [], trends: [] }
+    },
+    strategy: {
+      bull: { title: '', period: '', core: '', points: [], performance: {} },
+      bear: { title: '', period: '', core: '', points: [], performance: {} },
+      volatile: { title: '', period: '', core: '', points: [], performance: {} }
+    },
+    backtest: {}
+  };
+
+  if (!res || typeof res !== 'object') return defaults;
+
+  const indicators = {
+    ...defaults.indicators,
+    ...(res.indicators || {}),
+    macro: { ...defaults.indicators.macro, ...(res.indicators && res.indicators.macro ? res.indicators.macro : {}) },
+    market: { ...defaults.indicators.market, ...(res.indicators && res.indicators.market ? res.indicators.market : {}) },
+    sentiment: { ...defaults.indicators.sentiment, ...(res.indicators && res.indicators.sentiment ? res.indicators.sentiment : {}) }
+  };
+
+  const strategy = {
+    ...defaults.strategy,
+    ...(res.strategy || {})
+  };
+
+  return {
+    ...defaults,
+    ...res,
+    indicators,
+    strategy,
+    labels: Array.isArray(res.labels) ? res.labels : defaults.labels,
+    data: Array.isArray(res.data) ? res.data : defaults.data,
+    trends: Array.isArray(res.trends) ? res.trends : defaults.trends
+  };
+};
+
+// 封装加载函数：调用 fetchMarketData 并将结果归一化后赋值给 currentMarketInfo
+const loadMarketData = async (marketId, sDate, eDate) => {
+  try {
+    const res = await fetchMarketData(marketId, sDate, eDate);
+    currentMarketInfo.value = normalizeMarketInfo(res);
+    lastUpdated.value = new Date().toLocaleString();
+    return currentMarketInfo.value;
+  } catch (err) {
+    console.error('loadMarketData error', err);
+    return currentMarketInfo.value;
+  }
+};
+
 // 初始化日期
 onMounted(() => {
   // 设置默认结束日期为当前日期，格式 YYYY-MM-DD
@@ -906,22 +983,12 @@ onMounted(() => {
   endDate.value = defaultEndDate;
   calculatorEndDate.value = defaultEndDate;
 
-  // 初始加载市场数据，使用组件的选中市场与日期范围
-  fetchMarketData(selectedMarket.value, startDate.value, endDate.value);
 });
 
 // 监听市场变化
 // watch(selectedMarket, () => {
-//   fetchMarketData(selectedMarket.value, startDate.value, endDate.value);
+//   loadMarketData(selectedMarket.value, startDate.value, endDate.value);
 // });
-// 市场类型选项（未在模板中直接使用，保留供将来重构）
-const marketTypes = [
-  { value: '110020', label: '易方达沪深300EFT联接A' },
-  { value: 'zz500', label: '国内 - 中证500' },
-  { value: 'sp500', label: '美股 - 标普500' },
-  { value: 'ndx100', label: '美股 - 纳斯达克100' },
-  { value: 'gold', label: '黄金ETF' }
-];
 // 格式化日期（支持 YYYY-MM 和 YYYY-MM-DD）
 const formatDate = (dateString) => {
   if (!dateString) return '';
@@ -988,17 +1055,21 @@ const formatNumber = (num) => {
 // 处理市场变化
 const handleMarketChange = () => {
   showResults.value = false;
-  fetchMarketData(selectedMarket.value, startDate.value, endDate.value);
+  // loadMarketData(selectedMarket.value, startDate.value, endDate.value);
 };
 
 // 分析市场
-const analyzeMarket = () => {
+const analyzeMarket = async () => {
   if (new Date(startDate.value) > new Date(endDate.value)) {
     alert('开始日期不能晚于结束日期');
     return;
   }
   
   isLoading.value = true;
+
+  // 初始加载市场数据，使用组件的选中市场与日期范围
+  await loadMarketData(selectedMarket.value, startDate.value, endDate.value);
+  console.log('currentMarketInfo', currentMarketInfo.value)
   
   // 过滤符合时间范围的趋势
   filterTrendsByDateRange();

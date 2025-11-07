@@ -104,37 +104,49 @@ export function useMarketAnalysis() {
         trendsError: null
       };
 
-      // 1. 获取市场基础信息
-      // const marketInfo = await MarketAPI.getMarkets();
-      // apiState.value.marketsLoaded = true;
-      // const selectedInfo = marketInfo.markets.find(m => m.id === marketId);
-      
-      // if (!selectedInfo) {
-      //   throw new Error('未找到选中的市场信息');
-      // }
-
-      // 2. 获取市场历史数据
+      // 1. 获取市场历史数据（API 可能返回 array 或 { data: [...] }）
       const history = await MarketAPI.getMarketHistory(marketId);
-      const records = Array.isArray(history)? history : [];
-      const filteredRecords = filterHistoryByMonthRange(records, startDate, endDate)
-      console.log('Marke filteredRecords data:', filteredRecords);
+      const rawRecords = Array.isArray(history)
+        ? history
+        : (Array.isArray(history && history.data) ? history.data : (Array.isArray(history && history.records) ? history.records : []));
+
+      // 2. 根据用户选择的 startDate/endDate 做日度筛选（已经按日期升序返回）
+      const filteredRecords = filterHistoryByMonthRange(rawRecords, startDate, endDate);
       apiState.value.historyLoaded = true;
 
-      // 3. 获取市场趋势分析
-      // const trends = await MarketAPI.getMarketTrends(
-      //   marketId,
-      //   startDate,
-      //   endDate
-      // );
-      // apiState.value.trendsLoaded = true;
+      // 3. 将筛选后的日度记录聚合为每月最后一条记录（labels: 'YYYY-MM', data: 单位净值）
+      // 假设记录中日期字段可能是 '净值日期' / date / nav_date，单位净值字段可能是 '单位净值' / nav / close / value
+      const monthlyMap = new Map();
+      filteredRecords.forEach(rec => {
+        const rawDateStr = rec['净值日期'] || rec.date || rec['date'] || rec.nav_date || rec['单位净值日期'] || '';
+        const d = new Date(rawDateStr);
+        if (isNaN(d.getTime())) return;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        // 由于 filteredRecords 已按升序排序，直接赋值会保留该月的最后一条记录（后来的会覆盖前面的）
+        monthlyMap.set(key, rec);
+      });
 
-      // 整合数据
+      const labels = Array.from(monthlyMap.keys()).sort();
+      const data = labels.map(k => {
+        const rec = monthlyMap.get(k) || {};
+        const val = rec['单位净值'] ?? rec.unitNav ?? rec.nav ?? rec.close ?? rec.value ?? rec['累计净值'];
+        return val == null ? null : Number(val);
+      });
+      console.log('labels',labels)
+      console.log('data',data)
+      // 尝试从原始 history 响应中读取额外信息（如 name/trends/indicators），否则使用安全回退
+      const name = history && history.name ? history.name : '';
+      const fullName = history && history.fullName ? history.fullName : history && history.full_name ? history.full_name : name;
+      const trends = history && history.trends ? history.trends : [];
+      const indicators = history && history.indicators ? history.indicators : {};
+
       return {
-        // ...selectedInfo,
-        data: history.data.map(d => d.close),
-        labels: history.data.map(d => d.date),
-        trends: trends.trends,
-        indicators: trends.indicators
+        name,
+        fullName,
+        labels,
+        data,
+        trends,
+        indicators
       };
     } catch (err) {
       handleError(err);
