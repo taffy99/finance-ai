@@ -132,8 +132,23 @@ export function useMarketAnalysis() {
         const val = rec['单位净值'] ?? rec.unitNav ?? rec.nav ?? rec.close ?? rec.value ?? rec['累计净值'];
         return val == null ? null : Number(val);
       });
-      console.log('labels',labels)
-      console.log('data',data)
+
+      // 构造按日序列，供前端按周/双周/天采样使用
+      const formatYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const dailySeries = filteredRecords.map(rec => {
+        const rawDateStr = rec['净值日期'] || rec.date || rec['date'] || rec.nav_date || rec['单位净值日期'] || '';
+        const d = new Date(rawDateStr);
+        const val = rec['单位净值'] ?? rec.unitNav ?? rec.nav ?? rec.close ?? rec.value ?? rec['累计净值'];
+        return {
+          date: isNaN(d.getTime()) ? '' : formatYMD(d),
+          value: val == null ? null : Number(val),
+          raw: rec
+        };
+      }).filter(item => item.date);
+
+      console.log('labels', labels);
+      console.log('monthly data', data);
+      console.log('dailySeries length', dailySeries.length);
       // 尝试从原始 history 响应中读取额外信息（如 name/trends/indicators），否则使用安全回退
       const name = history && history.name ? history.name : '';
       const fullName = history && history.fullName ? history.fullName : history && history.full_name ? history.full_name : name;
@@ -146,7 +161,9 @@ export function useMarketAnalysis() {
         labels,
         data,
         trends,
-        indicators
+        indicators,
+        // 新增：按日升序的序列，格式 [{date: 'YYYY-MM-DD', value: Number, raw: 原始记录}]
+        dailySeries
       };
     } catch (err) {
       handleError(err);

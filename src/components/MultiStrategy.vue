@@ -530,7 +530,7 @@
            
               <div class="space-y-6">
                 <div class="group">
-                  <label class="block text-neutral mb-2 font-medium">每月定投金额 (元)</label>
+                  <label class="block text-neutral mb-2 font-medium">每期定投金额 (元)</label>
                   <input 
                     type="number" 
                     v-model.number="monthlyInvestment" 
@@ -538,6 +538,21 @@
                     step="100"
                     class="bg-light border border-gray-200 rounded-lg py-3 px-5 focus:outline-none focus:ring-2 focus:ring-primary/50 w-full text-lg"
                   >
+                </div>
+
+                <div class="group">
+                  <label class="block text-neutral mb-2 font-medium">定投频率</label>
+                  <div class="grid grid-cols-3 gap-3">
+                    <label class="flex items-center p-3 bg-light rounded-lg cursor-pointer hover:bg-light/70 transition-colors">
+                      <input type="radio" name="freq" value="weekly" v-model="contributionFrequency" class="mr-2"> 每周
+                    </label>
+                    <label class="flex items-center p-3 bg-light rounded-lg cursor-pointer hover:bg-light/70 transition-colors">
+                      <input type="radio" name="freq" value="biweekly" v-model="contributionFrequency" class="mr-2"> 双周
+                    </label>
+                    <label class="flex items-center p-3 bg-light rounded-lg cursor-pointer hover:bg-light/70 transition-colors">
+                      <input type="radio" name="freq" value="monthly" v-model="contributionFrequency" class="mr-2"> 每月
+                    </label>
+                  </div>
                 </div>
                 
                 <div class="group">
@@ -575,7 +590,36 @@
                 
                 
                 <div class="group">
-                  <label class="block text-neutral mb-2 font-medium">定投策略选择</label>
+                  <label class="block text-neutral mb-2 font-medium">
+                    <div class="flex items-center">
+                      <span>定投策略选择</span>
+                      <!-- tooltip wrapper: 使用 group 以便在 hover 时显示 tooltip -->
+                      <span class="relative inline-block ml-2 group">
+                        <i class="fa fa-info-circle text-neutral/500 group-hover:text-primary cursor-pointer" aria-hidden="true"></i>
+
+                        <!-- 优化后的自定义 tooltip：渐变背景、柔和阴影、淡入位移动画、整齐排版 -->
+                        <div class="pointer-events-none absolute left-1/2 transform -translate-x-1/2 top-full mt-3 max-w-xs w-80 bg-light text-neutral-900 text-sm p-3 rounded-lg shadow-md border border-gray-200 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 z-50">
+                          <!-- 箭头：与浅灰背景一致，使用轻边框 -->
+                          <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-light rotate-45 border-t border-l border-gray-200"></div>
+
+                          <div class="leading-relaxed text-sm">
+                            <div class="font-medium mb-2">策略说明</div>
+                            <ul class="list-disc ml-4 space-y-1 text-[13px] text-neutral-700">
+                              <li><span class="font-medium">普通定投（DCA）</span> — 按固定金额在每个期次买入，长期成本平均化。</li>
+                              <li><span class="font-medium">智能优化</span> — 根据价格波动动态调整投入，示例规则如下：</li>
+                            </ul>
+                            <div class="mt-2 text-[13px] text-neutral-600 pl-4">
+                              • 若本期相对上期下跌 ≥ 4%，则本期投入 = 基础投入 × 1.5（加仓）
+                            </div>
+                            <div class="mt-1 text-[13px] text-neutral-600 pl-4">
+                              • 若本期相对上期上涨 ≥ 4%，则本期投入 = 基础投入 × 0.7（减仓）
+                            </div>
+                            <div class="mt-2 text-xs text-neutral-500">提示：示例规则为演示用途，可后续扩展为可配置策略参数。</div>
+                          </div>
+                        </div>
+                      </span>
+                    </div>
+                  </label>
                   <div class="grid grid-cols-2 gap-4">
                     <label class="flex items-center p-4 bg-light rounded-lg cursor-pointer hover:bg-light/70 transition-colors">
                       <input 
@@ -613,8 +657,13 @@
                 <div class="space-y-6">
                   <div class="grid grid-cols-2 gap-4">
                     <div class="bg-white p-4 rounded-lg">
-                      <p class="text-neutral text-sm">定投总月数</p>
-                      <p class="text-xl font-bold">{{ calculationResults.totalMonths }} 个月</p>
+                      <p class="text-neutral text-sm">定投总期数</p>
+                      <p class="text-xl font-bold">
+                        {{ calculationResults.totalPeriods }}
+                        <span v-if="contributionFrequency === 'monthly'"> 期（按月）</span>
+                        <span v-else-if="contributionFrequency === 'biweekly'"> 期（双周）</span>
+                        <span v-else> 期（周）</span>
+                      </p>
                     </div>
                     <div class="bg-white p-4 rounded-lg">
                       <p class="text-neutral text-sm">总投入金额</p>
@@ -884,26 +933,155 @@ const monthlyInvestment = ref(1000);
 const calculatorStartDate = ref('2020-01-01');
 const calculatorEndDate = ref('2024-12-31');
 const selectedStrategy = ref('optimized');
+// 定投频率：'weekly' | 'biweekly' | 'monthly'
+const contributionFrequency = ref('monthly');
 const showCalculationResults = ref(false);
 const calculationResults = ref({});
 const returnChart = ref(null);
 
+// Helper: 构建定投时间表（包含起始和结束日期），按频率生成 YYYY-MM-DD 字符串数组
+const buildScheduleDates = (startStr, endStr, freq) => {
+  const msDay = 24 * 60 * 60 * 1000;
+  const res = [];
+  let cur = new Date(startStr);
+  const end = new Date(endStr);
+  if (isNaN(cur.getTime()) || isNaN(end.getTime()) || cur > end) return res;
+
+  const pushCur = () => res.push(_formatDateYMD(new Date(cur)));
+
+  if (freq === 'weekly' || freq === 'biweekly') {
+    const step = freq === 'weekly' ? 7 : 14;
+    while (cur <= end) {
+      pushCur();
+      cur = new Date(cur.getTime() + step * msDay);
+    }
+  } else {
+    // monthly
+    while (cur <= end) {
+      pushCur();
+      const next = new Date(cur.getFullYear(), cur.getMonth() + 1, cur.getDate());
+      // 处理月末日期溢出
+      if (next.getMonth() === cur.getMonth()) next.setDate(1), next.setMonth(cur.getMonth() + 1);
+      cur = next;
+    }
+  }
+  return res;
+};
+
+// Helper: 按日期（YYYY-MM-DD）在 dailySeries 中找到最接近且不晚于目标日期的价格；若找不到则返回最近的下一个可用价格
+const getPriceNearest = (dateStr) => {
+  const series = (currentMarketInfo.value && currentMarketInfo.value.dailySeries) || [];
+  if (!series.length) return null;
+  // 二分或线性查找（这里用线性，数据通常不太大）
+  let prev = null;
+  for (let i = 0; i < series.length; i++) {
+    const item = series[i];
+    if (!item || !item.date) continue;
+    if (item.date === dateStr) return item.value;
+    if (item.date < dateStr) prev = item;
+    if (item.date > dateStr) return (prev && prev.value != null) ? prev.value : item.value;
+  }
+  return prev ? prev.value : null;
+};
+
+// 模拟定投（支持按周/双周/每月），返回统计结果和序列
+const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyType) => {
+  const schedule = buildScheduleDates(startStr, endStr, freq);
+  if (!schedule.length) return null;
+  const seriesPrices = schedule.map(d => ({ date: d, price: getPriceNearest(d) }));
+  // 过滤掉所有无法取到价格的期次
+  const valid = seriesPrices.filter(p => p.price != null);
+  if (!valid.length) return null;
+
+  const baselineStartPrice = valid[0].price;
+  const baselineSeries = valid.map(p => (p.price / baselineStartPrice) * 10000);
+
+  let normalTotalShares = 0;
+  let normalTotalInvested = 0;
+  const normalValueSeries = [];
+
+  let optimizedTotalShares = 0;
+  let optimizedTotalInvested = 0;
+  const optimizedValueSeries = [];
+
+  for (let i = 0; i < valid.length; i++) {
+    const price = valid[i].price;
+    const investNormal = Number(amountPerPeriod) || 0;
+    const sharesNormal = investNormal / price;
+    normalTotalShares += sharesNormal;
+    normalTotalInvested += investNormal;
+    normalValueSeries.push(normalTotalShares * price);
+
+    // 优化定投逻辑：参考上月/上期价格变动
+    let multiplier = 1;
+    if (i > 0) {
+      const prev = valid[i - 1].price;
+      const pct = (price - prev) / prev;
+      if (pct <= -0.04) multiplier = 1.5;
+      else if (pct >= 0.04) multiplier = 0.7;
+    }
+    const investOpt = (Number(amountPerPeriod) || 0) * multiplier;
+    const sharesOpt = investOpt / price;
+    optimizedTotalShares += sharesOpt;
+    optimizedTotalInvested += investOpt;
+    optimizedValueSeries.push(optimizedTotalShares * price);
+  }
+
+  const normalFinal = normalValueSeries.length ? normalValueSeries[normalValueSeries.length - 1] : 0;
+  const optimizedFinal = optimizedValueSeries.length ? optimizedValueSeries[optimizedValueSeries.length - 1] : 0;
+
+  const normalReturnPct = normalTotalInvested > 0 ? ((normalFinal - normalTotalInvested) / normalTotalInvested) * 100 : 0;
+  const optimizedReturnPct = optimizedTotalInvested > 0 ? ((optimizedFinal - optimizedTotalInvested) / optimizedTotalInvested) * 100 : 0;
+
+  // 年化：按实际天数计算
+  const firstDate = new Date(valid[0].date);
+  const lastDate = new Date(valid[valid.length - 1].date);
+  const years = Math.max( (lastDate - firstDate) / (1000 * 3600 * 24) / 365 , 1/12 );
+  const normalAnnualReturn = years > 0 ? (Math.pow(1 + normalReturnPct / 100, 1 / years) - 1) * 100 : 0;
+  const optimizedAnnualReturn = years > 0 ? (Math.pow(1 + optimizedReturnPct / 100, 1 / years) - 1) * 100 : 0;
+
+  return {
+    periodCount: valid.length,
+    baselineSeries,
+    normalSeries: normalValueSeries,
+    optimizedSeries: optimizedValueSeries,
+    normalTotalInvested,
+    optimizedTotalInvested,
+    normalFinal,
+    optimizedFinal,
+    normalReturnPct: +normalReturnPct.toFixed(2),
+    optimizedReturnPct: +optimizedReturnPct.toFixed(2),
+    normalAnnualReturn: +normalAnnualReturn.toFixed(2),
+    optimizedAnnualReturn: +optimizedAnnualReturn.toFixed(2),
+    labels: valid.map(v => v.date)
+  };
+};
+
 // 回测状态默认值
+/**
+ * DEFAULT_BACKTEST_INFO — 回测默认占位对象（中文注释）
+ *
+ * 可选/扩展字段说明（在回测结果中可能包含）：
+ * - normalTotalInvested / optimizedTotalInvested: 普通/优化策略的累计投入（Number，货币单位）。
+ * - normalFinalValue / optimizedFinalValue: 普通/优化策略的期末市值（Number，货币单位）。
+ *
+ * 备注：该常量作为回测结果的默认占位，便于在数据尚未加载或加载失败时页面渲染保持稳定。
+ */
 const DEFAULT_BACKTEST_INFO = {
-  period: 0,
-  baselineReturn: 0,
-  baselineSeries: [],
-  normalSeries: [],
-  optimizedSeries: [],
-  normalReturn: 0,
-  normalAnnualReturn: 0,
-  normalMaxDrawdown: 0,
-  normalSharpeRatio: 0,
-  optimizedReturn: 0,
-  optimizedAnnualReturn: 0,
-  optimizedMaxDrawdown: 0,
-  optimizedSharpeRatio: 0,
-  labels: []
+  period: 0, // 回测总周期，单位为月（number）
+  baselineReturn: 0, // 基准指数在回测期内的累计收益率（百分比，Number，例如 12.34 表示 12.34%）
+  baselineSeries: [], // 基准指数每月的价值序列（Array<Number>），用于绘图与基线对比
+  normalSeries: [], // 普通定投（DCA）每月组合市值序列（Array<Number>）
+  optimizedSeries: [], // 智能优化定投每月组合市值序列（Array<Number>）
+  normalReturn: 0, // 普通定投在回测期内的总收益率（百分比，Number）
+  normalAnnualReturn: 0, // 普通定投的年化收益率（百分比，Number）
+  normalMaxDrawdown: 0, // 普通定投期间的最大回撤（百分比，Number）
+  normalSharpeRatio: 0, // 普通定投的夏普比率（年化，Number）
+  optimizedReturn: 0, // 优化定投在回测期内的总收益率（百分比，Number）
+  optimizedAnnualReturn: 0, // 优化定投的年化收益率（百分比，Number）
+  optimizedMaxDrawdown: 0, // 优化定投期间的最大回撤（百分比，Number）
+  optimizedSharpeRatio: 0, // 优化定投的夏普比率（年化，Number）
+  labels: [] // 回测序列对应的月份标签数组（Array<String>，格式 'YYYY-MM'），用于图表横轴
 };
 
 const backtestInfo = ref({ ...DEFAULT_BACKTEST_INFO });
@@ -1220,57 +1398,67 @@ const initMarketTrendChart = () => {
   });
 };
 
-// 计算收益
+// 计算收益（支持按周/双周/每月）
 const calculateReturns = () => {
   if (new Date(calculatorStartDate.value) > new Date(calculatorEndDate.value)) {
     alert('开始日期不能晚于结束日期');
     return;
   }
-  
-  // 获取日期范围内的数据
-  const calcStartMonth = (calculatorStartDate.value || '').slice(0,7);
-  const calcEndMonth = (calculatorEndDate.value || '').slice(0,7);
-  const startIdx = currentMarketInfo.value.labels.indexOf(calcStartMonth);
-  const endIdx = currentMarketInfo.value.labels.indexOf(calcEndMonth);
-  
-  if (startIdx === -1 || endIdx === -1) return;
-  
-  const totalMonths = endIdx - startIdx + 1;
-  const totalInvestment = monthlyInvestment.value * totalMonths;
-  
-  // 根据选择的策略计算不同的收益率
-  let returnRate;
-  if (selectedStrategy.value === 'normal') {
-    // 普通定投收益率 - 基于回测数据
-    returnRate = backtestInfo.value.normalReturn / 100;
-  } else {
-    // 优化定投收益率 - 基于回测数据
-    returnRate = backtestInfo.value.optimizedReturn / 100;
+
+  // 使用日序列计算按频率的定投结果
+  if (!currentMarketInfo.value || !Array.isArray(currentMarketInfo.value.dailySeries)) {
+    alert('市场日度数据不可用，请先分析市场以加载数据');
+    return;
   }
-  
-  // 计算最终金额和收益
-  const finalAmount = totalInvestment * (1 + returnRate);
+
+  const sim = simulateInvestment(
+    calculatorStartDate.value,
+    calculatorEndDate.value,
+    contributionFrequency.value,
+    monthlyInvestment.value,
+    selectedStrategy.value
+  );
+
+  if (!sim) {
+    alert('无法在选定时间范围内构造定投序列（缺少价格数据）');
+    return;
+  }
+
+  // 根据选择的策略采用不同的返回值
+  const isNormal = selectedStrategy.value === 'normal';
+  const totalPeriods = sim.periodCount;
+  const totalInvestment = (isNormal ? sim.normalTotalInvested : sim.optimizedTotalInvested);
+  const finalAmount = (isNormal ? sim.normalFinal : sim.optimizedFinal);
   const totalProfit = finalAmount - totalInvestment;
-  
-  // 计算年化收益率
-  const years = totalMonths / 12;
-  const annualReturn = years > 0 ? (Math.pow(1 + returnRate, 1 / years) - 1) * 100 : 0;
-  
-  // 保存计算结果
+  const totalReturn = isNormal ? sim.normalReturnPct : sim.optimizedReturnPct;
+  const annualReturn = isNormal ? sim.normalAnnualReturn : sim.optimizedAnnualReturn;
+
   calculationResults.value = {
-    totalMonths,
+    totalPeriods,
     totalInvestment,
     finalAmount,
     totalProfit,
-    totalReturn: returnRate * 100,
+    totalReturn,
     annualReturn
   };
-  
-  // 生成收益图表
+
+  // 生成收益图表（柱状图）
   initReturnChart();
-  
+
   showCalculationResults.value = true;
 };
+
+// 当用户切换定投频率或定投策略时，若当前已显示计算结果则自动刷新计算
+watch([contributionFrequency, selectedStrategy], () => {
+  if (showCalculationResults.value) {
+    // 重新计算收益，保持交互即时响应
+    try {
+      calculateReturns();
+    } catch (e) {
+      console.error('自动刷新计算失败', e);
+    }
+  }
+});
 
 // 初始化收益图表
 const initReturnChart = () => {
