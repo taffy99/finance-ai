@@ -654,6 +654,31 @@
               <div v-if="showCalculationResults" class="bg-light/50 rounded-lg p-6">
                 <h3 class="font-semibold text-lg mb-6">收益计算结果</h3>
                 
+                <!-- 加仓/减仓预警提示 -->
+                <div v-if="showAlert" class="mb-6">
+                  <div class="p-4 rounded-lg" :class="investmentAlert.type === 'increase' ? 'bg-bull/10 border-l-4 border-bull' : 'bg-bear/10 border-l-4 border-bear'">
+                    <div class="flex items-start">
+                      <div class="flex-shrink-0">
+                        <i class="fa" :class="investmentAlert.type === 'increase' ? 'fa-arrow-circle-up text-bull text-2xl' : 'fa-arrow-circle-down text-bear text-2xl'"></i>
+                      </div>
+                      <div class="ml-3 flex-grow">
+                        <h4 class="font-medium text-base" :class="investmentAlert.type === 'increase' ? 'text-bull' : 'text-bear'">
+                          {{ investmentAlert.type === 'increase' ? '建议加仓' : '建议减仓' }}
+                          <span v-if="investmentAlert.level" class="ml-2 text-xs px-2 py-1 rounded-full bg-white" :class="investmentAlert.level === 'strong' ? 'text-danger' : investmentAlert.level === 'medium' ? 'text-warning' : 'text-info'">
+                            {{ investmentAlert.level === 'strong' ? '强烈' : investmentAlert.level === 'medium' ? '中等' : '温和' }}
+                          </span>
+                        </h4>
+                        <p class="text-sm mt-1 text-neutral">
+                          {{ investmentAlert.reason }}，建议调整下期定投金额至 <strong>¥{{ formatNumber(investmentAlert.amount) }}</strong>
+                        </p>
+                        <div class="mt-2 text-xs text-neutral">
+                          上期价格：¥{{ investmentAlert.prevPrice?.toFixed(2) }} | 当前价格：¥{{ investmentAlert.currentPrice?.toFixed(2) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
                 <div class="space-y-6">
                   <div class="grid grid-cols-2 gap-4">
                     <div class="bg-white p-4 rounded-lg">
@@ -696,9 +721,9 @@
                     </p>
                   </div>
                   
-                  <div class="mt-4">
+                  <!-- <div class="mt-4">
                     <canvas id="return-chart" height="180"></canvas>
-                  </div>
+                  </div> -->
                 </div>
               </div>
               
@@ -938,6 +963,9 @@ const contributionFrequency = ref('monthly');
 const showCalculationResults = ref(false);
 const calculationResults = ref({});
 const returnChart = ref(null);
+// 加仓/减仓预警状态
+const investmentAlert = ref({});
+const showAlert = ref(false);
 
 // Helper: 构建定投时间表（包含起始和结束日期），按频率生成 YYYY-MM-DD 字符串数组
 const buildScheduleDates = (startStr, endStr, freq) => {
@@ -1004,6 +1032,59 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
   let optimizedTotalInvested = 0;
   const optimizedValueSeries = [];
 
+  // 计算价格变化，用于生成预警建议
+  let alertInfo = null;
+  const series = valid || [];
+  if (series.length >= 2) {
+    // 获取最近的两个价格点（基于dailySeries）
+    const sortedSeries = [...series].sort((a, b) => new Date(b.date) - new Date(a.date));
+    console.log('sortedSeries', sortedSeries);
+    const latestPrice = sortedSeries[0].price;
+    const prevPrice = sortedSeries[1].price;
+    const periodChange = (latestPrice - prevPrice) / prevPrice;
+    console.log('最近价格变化：', {
+      latestPrice,
+      prevPrice,
+      periodChange
+    });
+    // 根据定投频率确定对比期数和描述
+    let periodDescription = '';
+    let changeThresholds = { medium: 0.02, strong: 0.05 };
+  
+    // 根据定投频率设置参数和对比周期
+    if (freq === 'weekly') {
+      periodDescription = '上周';
+      
+    } else if (freq === 'biweekly') {
+      periodDescription = '上双周';
+    } else {
+      // 月定投
+      periodDescription = '上月';
+    }
+    // 根据价格变化生成预警建议
+    if (periodChange <= -changeThresholds.medium) {
+      // 下跌预警 - 建议加仓
+      alertInfo = {
+        type: 'increase',
+        level: periodChange <= -changeThresholds.strong ? 'strong' : periodChange <= -changeThresholds.medium ? 'medium' : 'weak',
+        amount: amountPerPeriod * 1.5,
+        reason: `${periodDescription}下跌${(periodChange * 100).toFixed(3)}%`,
+        currentPrice: latestPrice,
+        prevPrice: prevPrice
+      };
+    } else if (periodChange >= changeThresholds.medium) {
+      // 上涨预警 - 建议减仓
+      alertInfo = {
+        type: 'decrease',
+        level: periodChange >= changeThresholds.strong ? 'strong' : periodChange >= changeThresholds.medium ? 'medium' : 'weak',
+        amount: amountPerPeriod * 0.7,
+        reason: `${periodDescription}上涨${(periodChange * 100).toFixed(3)}%`,
+        currentPrice: latestPrice,
+        prevPrice: prevPrice
+      };
+    }
+  }
+
   for (let i = 0; i < valid.length; i++) {
     const price = valid[i].price;
     const investNormal = Number(amountPerPeriod) || 0;
@@ -1053,7 +1134,8 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
     optimizedReturnPct: +optimizedReturnPct.toFixed(2),
     normalAnnualReturn: +normalAnnualReturn.toFixed(2),
     optimizedAnnualReturn: +optimizedAnnualReturn.toFixed(2),
-    labels: valid.map(v => v.date)
+    labels: valid.map(v => v.date),
+    alertInfo: alertInfo // 返回预警信息
   };
 };
 
@@ -1410,7 +1492,7 @@ const calculateReturns = () => {
     alert('市场日度数据不可用，请先分析市场以加载数据');
     return;
   }
-
+  
   const sim = simulateInvestment(
     calculatorStartDate.value,
     calculatorEndDate.value,
@@ -1441,9 +1523,21 @@ const calculateReturns = () => {
     totalReturn,
     annualReturn
   };
+  console.log('sim.alertInfo', sim.alertInfo);
+  // 处理预警信息
+  if (sim.alertInfo) { 
+    investmentAlert.value = sim.alertInfo;
+    showAlert.value = true;
+  } else {
+    // 只有在有实际数据的情况下才显示预警信息
+    // 避免即使没有有意义的变化也显示默认信息
+    if (showAlert.value) {
+      showAlert.value = false;
+    }
+  }
 
   // 生成收益图表（柱状图）
-  initReturnChart();
+  // initReturnChart();
 
   showCalculationResults.value = true;
 };
