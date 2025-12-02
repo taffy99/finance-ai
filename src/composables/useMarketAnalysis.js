@@ -90,8 +90,21 @@ export function useMarketAnalysis() {
 
     return normalized;
   };
-
-  // 获取市场数据
+  // 获取市场列表
+  const fetchMarkets = async () => {
+    try {
+      isLoading.value = true;
+      const markets = await MarketAPI.getMarkets();
+      apiState.value.marketsLoaded = true;
+      return markets;
+    } catch (err) {
+      handleError(err);
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+  // 获取市场历史数据（按日度筛选）
   const fetchMarketData = async (marketId, startDate, endDate) => {
     try {
       isLoading.value = true;
@@ -271,6 +284,7 @@ export function useMarketAnalysis() {
     isLoading,
     apiState,
     handleError,
+    fetchMarkets,
     fetchMarketData,
     runBacktest,
     calculateStrategy

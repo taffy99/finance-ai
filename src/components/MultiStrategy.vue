@@ -48,23 +48,53 @@
               <i class="fa fa-chart-line mr-2 text-primary/70"></i>
               选择市场
             </label>
-            <div class="relative">
-              <select 
-                v-model="selectedMarket" 
-                class="appearance-none bg-light border-2 border-gray-100 rounded-xl py-3.5 px-5 pr-10 w-full text-lg
-                       transition-all duration-300 ease-in-out
-                       focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50
-                       group-hover:border-primary/30"
-                @change="handleMarketChange"
+            <div class="relative" ref="dropdownContainer">
+              <!-- 搜索输入框 -->
+              <div 
+                class="appearance-none bg-light border-2 border-gray-100 rounded-xl py-3.5 px-5 w-full text-lg
+                      transition-all duration-300 ease-in-out cursor-pointer
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50
+                      group-hover:border-primary/30 flex justify-between items-center"
+                @click="toggleDropdown"
               >
-                <option value="000008">国内 - 中证500</option>
-                <option value="110020">国内 - 沪深300</option>
-                <option value="050025">美股 - 标普500</option>
-                <option value="000834">美股 - 纳斯达克100</option>
-                <option value="002963">黄金ETF</option>
-              </select>
-              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-neutral/70 group-hover:text-primary/70 transition-colors duration-300">
-                <i class="fa fa-chevron-down"></i>
+                <span v-if="selectedMarketLabel">{{ selectedMarketLabel }}</span>
+                <span v-else class="text-gray-400">请选择市场</span>
+                <i class="fa" :class="isDropdownOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              </div>
+              
+              <!-- 下拉菜单 -->
+              <div 
+                v-show="isDropdownOpen" 
+                class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto"
+              >
+                <!-- 搜索框 -->
+                <div class="p-2 border-b border-gray-100">
+                  <input
+                    ref="searchInput"
+                    v-model="fundCodeInput"
+                    type="text"
+                    placeholder="输入基金代码或名称进行筛选"
+                    class="appearance-none bg-light border border-gray-200 rounded-lg py-2 px-3 w-full text-base
+                          focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/50"
+                    @input="onSearchInput"
+                  />
+                </div>
+                
+                <!-- 选项列表 -->
+                <ul class="py-1">
+                  <li
+                    v-for="option in filteredMarketOptions"
+                    :key="option.value"
+                    class="px-4 py-2 hover:bg-primary/10 cursor-pointer flex justify-between items-center"
+                    @click="selectMarket(option)"
+                  >
+                    <span>{{ option.label }}</span>
+                    <span class="text-gray-500 text-sm">{{ option.value }}</span>
+                  </li>
+                  <li v-if="filteredMarketOptions.length === 0" class="px-4 py-2 text-gray-500">
+                    未找到匹配的市场
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
@@ -146,7 +176,7 @@
                 <span>震荡市</span>
               </div>
             </div>
-          </div>
+           </div>
           
           <!-- 趋势图表 -->
           <div class="h-80 mb-8">
@@ -530,6 +560,16 @@
            
               <div class="space-y-6">
                 <div class="group">
+                  <label class="block text-neutral mb-2 font-medium">定投目标金额 (元)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="targetAmount" 
+                    min="1000" 
+                    step="1000"
+                    class="bg-light border border-gray-200 rounded-lg py-3 px-5 focus:outline-none focus:ring-2 focus:ring-primary/50 w-full text-lg"
+                  >
+                </div>
+                <div class="group">
                   <label class="block text-neutral mb-2 font-medium">每期定投金额 (元)</label>
                   <input 
                     type="number" 
@@ -539,7 +579,6 @@
                     class="bg-light border border-gray-200 rounded-lg py-3 px-5 focus:outline-none focus:ring-2 focus:ring-primary/50 w-full text-lg"
                   >
                 </div>
-
                 <div class="group">
                   <label class="block text-neutral mb-2 font-medium">定投频率</label>
                   <div class="grid grid-cols-3 gap-3">
@@ -609,10 +648,10 @@
                               <li><span class="font-medium">智能优化</span> — 根据价格波动动态调整投入，示例规则如下：</li>
                             </ul>
                             <div class="mt-2 text-[13px] text-neutral-600 pl-4">
-                              • 若本期相对上期下跌 ≥ 4%，则本期投入 = 基础投入 × 1.5（加仓）
+                              • 若本期相对上期下跌 ≥ 2%，则本期投入 = 基础投入 × 1.5（加仓）
                             </div>
                             <div class="mt-1 text-[13px] text-neutral-600 pl-4">
-                              • 若本期相对上期上涨 ≥ 4%，则本期投入 = 基础投入 × 0.7（减仓）
+                              • 若本期相对上期上涨 ≥ 2%，则本期投入 = 基础投入 × 0.7（减仓）
                             </div>
                             <div class="mt-2 text-xs text-neutral-500">提示：示例规则为演示用途，可后续扩展为可配置策略参数。</div>
                           </div>
@@ -656,23 +695,26 @@
                 
                 <!-- 加仓/减仓预警提示 -->
                 <div v-if="showAlert" class="mb-6">
-                  <div class="p-4 rounded-lg" :class="investmentAlert.type === 'increase' ? 'bg-bull/10 border-l-4 border-bull' : 'bg-bear/10 border-l-4 border-bear'">
+                  <div class="p-4 rounded-lg" :class="investmentAlert.type === 'increase' || investmentAlert.type === 'normal'? 'bg-bull/10 border-l-4 border-bull' : 'bg-bear/10 border-l-4 border-bear'">
                     <div class="flex items-start">
                       <div class="flex-shrink-0">
-                        <i class="fa" :class="investmentAlert.type === 'increase' ? 'fa-arrow-circle-up text-bull text-2xl' : 'fa-arrow-circle-down text-bear text-2xl'"></i>
+                        <i class="fa" :class="investmentAlert.type === 'normal'?'fa-info-circle text-bull text-2xl':investmentAlert.type === 'increase' ? 'fa-arrow-circle-up text-bull text-2xl' : 'fa-arrow-circle-down text-bear text-2xl'"></i>
                       </div>
                       <div class="ml-3 flex-grow">
-                        <h4 class="font-medium text-base" :class="investmentAlert.type === 'increase' ? 'text-bull' : 'text-bear'">
-                          {{ investmentAlert.type === 'increase' ? '建议加仓' : '建议减仓' }}
+                        <h4 class="font-medium text-base" :class="investmentAlert.type === 'increase'||investmentAlert.type === 'normal' ? 'text-bull' : 'text-bear'">
+                          {{ investmentAlert.type === 'normal'?'建议保持':investmentAlert.type === 'increase' ? '建议加仓' : '建议减仓' }}
                           <span v-if="investmentAlert.level" class="ml-2 text-xs px-2 py-1 rounded-full bg-white" :class="investmentAlert.level === 'strong' ? 'text-danger' : investmentAlert.level === 'medium' ? 'text-warning' : 'text-info'">
                             {{ investmentAlert.level === 'strong' ? '强烈' : investmentAlert.level === 'medium' ? '中等' : '温和' }}
                           </span>
                         </h4>
-                        <p class="text-sm mt-1 text-neutral">
+                        <p class="text-sm mt-1 text-neutral" v-if="investmentAlert.type === 'normal'">
+                          {{ investmentAlert.reason }}，建议维持目前定投金额 <strong>¥{{ formatNumber(investmentAlert.amount) }}</strong>
+                        </p>
+                         <p class="text-sm mt-1 text-neutral" v-else>
                           {{ investmentAlert.reason }}，建议调整下期定投金额至 <strong>¥{{ formatNumber(investmentAlert.amount) }}</strong>
                         </p>
                         <div class="mt-2 text-xs text-neutral">
-                          上期价格：¥{{ investmentAlert.prevPrice?.toFixed(2) }} | 当前价格：¥{{ investmentAlert.currentPrice?.toFixed(2) }}
+                          上期价格：¥{{ investmentAlert.prevPrice }} | 当期价格：¥{{ investmentAlert.currentPrice }}
                         </div>
                       </div>
                     </div>
@@ -745,12 +787,12 @@
           
           <div class="mb-8">
             <p class="text-neutral leading-relaxed">
-              以下是基于历史数据的策略回测结果，展示了在{{ formatDate(startDate) }}-{{ formatDate(endDate) }}期间，普通定投与智能优化定投的表现对比：
+              以下是基于历史数据的策略回测结果，展示了在{{ formatDate(startDate) }}-{{ formatDate(endDate) }}期间，按月普通定投与智能优化定投的表现对比：
             </p>
           </div>
           
           <div class="h-80 mb-8">
-            <canvas id="backtest-chart"></canvas>
+            <canvas ref="backtestChartCanvas"></canvas>
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -906,10 +948,9 @@
 
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue';
+import { ref, onMounted, watch, nextTick, computed, onBeforeUnmount } from 'vue';
 import { Chart, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
-import axios from 'axios';
 import MonthPicker from './MonthPicker.vue';
 import { useMarketAnalysis } from '../composables/useMarketAnalysis.js';
 
@@ -919,6 +960,7 @@ Chart.register(...registerables, annotationPlugin);
 
 // 状态管理
 const selectedMarket = ref('000008');
+const fundCodeInput = ref(''); // 添加这行：基金代码输入框的值
 // 将 startDate 初始值设为当前日期向前 6 个月，格式 YYYY-MM-DD
 const _initialToday = new Date();
 const _sixMonthsAgo = new Date(_initialToday.getFullYear(), _initialToday.getMonth() - 6, _initialToday.getDate());
@@ -952,9 +994,29 @@ const currentMarketInfo = ref({
   backtest: {}
 });
 const filteredTrends = ref([]);
-
+// 下拉菜单相关状态
+const dropdownContainer = ref(null);
+const isDropdownOpen = ref(false);
+// 计算属性：根据基金代码输入筛选市场选项
+const filteredMarketOptions = computed(() => {
+  if (!fundCodeInput.value) {
+    return marketOptions.value;
+  }
+  
+  const searchTerm = fundCodeInput.value.toLowerCase();
+  return marketOptions.value.filter(option => 
+    option.value.toLowerCase().includes(searchTerm) || 
+    option.label.toLowerCase().includes(searchTerm)
+  );
+});
+// 计算属性：获取选中市场的标签
+const selectedMarketLabel = computed(() => {
+  const selected = marketOptions.value.find(option => option.value === selectedMarket.value);
+  return selected ? selected.label : '';
+});
 // 定投计算器状态
 const monthlyInvestment = ref(1000);
+const targetAmount = ref(100000); // 添加这行：定投目标金额
 const calculatorStartDate = ref('2020-01-01');
 const calculatorEndDate = ref('2024-12-31');
 const selectedStrategy = ref('optimized');
@@ -967,6 +1029,26 @@ const returnChart = ref(null);
 const investmentAlert = ref({});
 const showAlert = ref(false);
 
+// 添加toggleDropdown函数
+const toggleDropdown = () => {
+  isDropdownOpen.value = !isDropdownOpen.value;
+};
+// 添加onSearchInput函数
+const onSearchInput = (event) => {
+  fundCodeInput.value = event.target.value;
+};
+// 添加selectMarket函数
+const selectMarket = (option) => {
+  selectedMarket.value = option.value;
+  isDropdownOpen.value = false;
+  fundCodeInput.value = ''; // 清空搜索框
+};
+// 添加点击外部关闭下拉菜单的功能
+const handleClickOutside = (event) => {
+  if (dropdownContainer.value && !dropdownContainer.value.contains(event.target)) {
+    isDropdownOpen.value = false;
+  }
+};
 // Helper: 构建定投时间表（包含起始和结束日期），按频率生成 YYYY-MM-DD 字符串数组
 const buildScheduleDates = (startStr, endStr, freq) => {
   const msDay = 24 * 60 * 60 * 1000;
@@ -984,6 +1066,8 @@ const buildScheduleDates = (startStr, endStr, freq) => {
       cur = new Date(cur.getTime() + step * msDay);
     }
   } else {
+
+
     // monthly
     while (cur <= end) {
       pushCur();
@@ -998,7 +1082,7 @@ const buildScheduleDates = (startStr, endStr, freq) => {
 
 // Helper: 按日期（YYYY-MM-DD）在 dailySeries 中找到最接近且不晚于目标日期的价格；若找不到则返回最近的下一个可用价格
 const getPriceNearest = (dateStr) => {
-  const series = (currentMarketInfo.value && currentMarketInfo.value.dailySeries) || [];
+  const series = currentMarketInfo.value && currentMarketInfo.value.dailySeries || [];
   if (!series.length) return null;
   // 二分或线性查找（这里用线性，数据通常不太大）
   let prev = null;
@@ -1022,7 +1106,7 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
   if (!valid.length) return null;
 
   const baselineStartPrice = valid[0].price;
-  const baselineSeries = valid.map(p => (p.price / baselineStartPrice) * 10000);
+  const baselineSeries = valid.map(p => (p.price / baselineStartPrice) * Number(amountPerPeriod || 0));
 
   let normalTotalShares = 0;
   let normalTotalInvested = 0;
@@ -1038,7 +1122,6 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
   if (series.length >= 2) {
     // 获取最近的两个价格点（基于dailySeries）
     const sortedSeries = [...series].sort((a, b) => new Date(b.date) - new Date(a.date));
-    console.log('sortedSeries', sortedSeries);
     const latestPrice = sortedSeries[0].price;
     const prevPrice = sortedSeries[1].price;
     const periodChange = (latestPrice - prevPrice) / prevPrice;
@@ -1082,6 +1165,16 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
         currentPrice: latestPrice,
         prevPrice: prevPrice
       };
+    } else {
+      // 价格变化正常，不建议任何操作
+      alertInfo = {
+        type: 'normal',
+        level: 'weak',
+        amount: amountPerPeriod,
+        reason: `${periodDescription}涨跌幅${(periodChange * 100).toFixed(3)}%,价格变化不大，无需调整定投金额`,
+        currentPrice: latestPrice,
+        prevPrice: prevPrice
+      }
     }
   }
 
@@ -1098,8 +1191,8 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
     if (i > 0) {
       const prev = valid[i - 1].price;
       const pct = (price - prev) / prev;
-      if (pct <= -0.04) multiplier = 1.5;
-      else if (pct >= 0.04) multiplier = 0.7;
+      if (pct <= -0.02) multiplier = 1.5;
+      else if (pct >= 0.02) multiplier = 0.7;
     }
     const investOpt = (Number(amountPerPeriod) || 0) * multiplier;
     const sharesOpt = investOpt / price;
@@ -1121,7 +1214,7 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
   const normalAnnualReturn = years > 0 ? (Math.pow(1 + normalReturnPct / 100, 1 / years) - 1) * 100 : 0;
   const optimizedAnnualReturn = years > 0 ? (Math.pow(1 + optimizedReturnPct / 100, 1 / years) - 1) * 100 : 0;
 
-  return {
+  return { 
     periodCount: valid.length,
     baselineSeries,
     normalSeries: normalValueSeries,
@@ -1168,12 +1261,13 @@ const DEFAULT_BACKTEST_INFO = {
 
 const backtestInfo = ref({ ...DEFAULT_BACKTEST_INFO });
 const backtestChart = ref(null);
+const backtestChartCanvas = ref(null);
 // 将 DOM canvas 与 Chart 实例分离
 const marketTrendCanvas = ref(null);
 const marketTrendChart = ref(null); // Chart 实例
 
 // 从 composable 中获取数据加载方法（useMarketAnalysis 导出一个工厂函数）
-const { fetchMarketData } = useMarketAnalysis();
+const { fetchMarketData, fetchMarkets } = useMarketAnalysis();
 
 // 将 API 返回的数据与组件期望的结构合并，填充默认值以避免模板访问时出错
 const normalizeMarketInfo = (res) => {
@@ -1234,7 +1328,11 @@ const loadMarketData = async (marketId, sDate, eDate) => {
     return currentMarketInfo.value;
   }
 };
-
+const marketOptions = ref([]);
+// 添加清理事件监听器
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 // 初始化日期
 onMounted(() => {
   // 设置默认结束日期为当前日期，格式 YYYY-MM-DD
@@ -1242,13 +1340,19 @@ onMounted(() => {
   const defaultEndDate = _formatDateYMD(today);
   endDate.value = defaultEndDate;
   calculatorEndDate.value = defaultEndDate;
-
+  // 加载市场列表
+  fetchMarkets().then(markets => {
+    marketOptions.value = markets.map(market => ({
+      value: market['基金代码'],
+      label: market['基金简称']
+    }));
+    // 如果当前选中的市场不在市场列表中，设置为第一个市场
+    if (marketOptions.value.length > 0 && !marketOptions.value.some(option => option.value === selectedMarket.value)) {
+      selectedMarket.value = marketOptions.value[0].value;
+    }
+  });
 });
 
-// 监听市场变化
-// watch(selectedMarket, () => {
-//   loadMarketData(selectedMarket.value, startDate.value, endDate.value);
-// });
 // 格式化日期（支持 YYYY-MM 和 YYYY-MM-DD）
 const formatDate = (dateString) => {
   if (!dateString) return '';
@@ -1317,7 +1421,10 @@ const handleMarketChange = () => {
   showResults.value = false;
   // loadMarketData(selectedMarket.value, startDate.value, endDate.value);
 };
-
+// 监听市场变化
+watch([startDate, endDate], () => {
+   showResults.value = false;
+});
 // 分析市场
 const analyzeMarket = async () => {
   if (new Date(startDate.value) > new Date(endDate.value)) {
@@ -1338,15 +1445,17 @@ const analyzeMarket = async () => {
   calculatorStartDate.value = startDate.value;
   calculatorEndDate.value = endDate.value;
   
-  // 生成回测数据
-  generateBacktestData();
-  
   // 延迟显示结果，模拟加载过程
   setTimeout(async () => {
     // 先渲染结果区域，再初始化依赖 DOM 的图表
     showResults.value = true;
     await nextTick();
+    // 生成市场趋势图表
     initMarketTrendChart();
+    // 生成回测数据
+    // generateBacktestData();
+    // 计算定投收益并生成回测数据
+    calculateReturns();
     isLoading.value = false;
   }, 800);
 };
@@ -1535,9 +1644,8 @@ const calculateReturns = () => {
       showAlert.value = false;
     }
   }
-
-  // 生成收益图表（柱状图）
-  // initReturnChart();
+    // 生成回测数据并初始化图表
+    generateBacktestData();
 
   showCalculationResults.value = true;
 };
@@ -1554,79 +1662,6 @@ watch([contributionFrequency, selectedStrategy], () => {
   }
 });
 
-// 初始化收益图表
-const initReturnChart = () => {
-  // 销毁现有图表
-  if (returnChart.value) {
-    returnChart.value.destroy();
-  }
-  
-  const el = document.getElementById('return-chart');
-  const create = (ctx) => {
-    returnChart.value = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ['总投入', '总收益', '期末总资产'],
-        datasets: [{
-          label: '金额 (元)',
-          data: [
-            calculationResults.value.totalInvestment,
-            calculationResults.value.totalProfit,
-            calculationResults.value.finalAmount
-          ],
-          backgroundColor: [
-            'rgba(78, 89, 105, 0.7)',
-            calculationResults.value.totalProfit > 0 ? 'rgba(0, 180, 42, 0.7)' : 'rgba(245, 63, 63, 0.7)',
-            'rgba(22, 93, 255, 0.7)'
-          ],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return `¥ ${formatNumber(context.raw)}`;
-              }
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              callback: function(value) {
-                if (value >= 1000) {
-                  return '¥' + (value / 1000) + 'k';
-                }
-                return '¥' + value;
-              }
-            }
-          }
-        }
-      }
-    });
-  };
-
-  if (!el) {
-    nextTick(() => {
-      const el2 = document.getElementById('return-chart');
-      if (!el2) return;
-      const ctx2 = el2.getContext && el2.getContext('2d');
-      if (ctx2) create(ctx2);
-    });
-    return;
-  }
-
-  const ctx = el.getContext('2d');
-  create(ctx);
-};
 
 // 生成回测数据（逐月现金流精确模拟）
 const generateBacktestData = () => {
@@ -1655,7 +1690,7 @@ const generateBacktestData = () => {
 
   // 基线：一次性买入（Lump-sum）初始资金，用于显示指数表现（按价格变化比例）
   const baselineStartPrice = priceSeries[0];
-  const baselineData = priceSeries.map(p => (p / baselineStartPrice) * 10000); // 以10000为基准金额
+  const baselineData = priceSeries.map(p => (p / baselineStartPrice) *  Number(targetAmount.value)); // 以10000为基准金额
 
   // 定投模拟（普通定投）：每月在当月价格买入固定份额
   const monthlyAmt = Number(monthlyInvestment.value) || 1000;
@@ -1665,7 +1700,7 @@ const generateBacktestData = () => {
   let normalTotalInvested = 0;
 
   // 优化定投：基于简单的价格变动规则动态调整当月投入
-  // 规则示例：本月相对上月下跌 >=4% => 加仓 1.5x；上涨 >=4% => 减仓 0.7x；否则 1x
+  // 规则示例：本月相对上月下跌 >=2% => 加仓 1.5x；上涨 >=2% => 减仓 0.7x；否则 1x
   const optimizedValueSeries = [];
   let optimizedTotalShares = 0;
   let optimizedTotalInvested = 0;
@@ -1685,8 +1720,8 @@ const generateBacktestData = () => {
     if (i > 0) {
       const prev = priceSeries[i - 1];
       const pct = (price - prev) / prev;
-      if (pct <= -0.04) multiplier = 1.5; // 跌幅>=4%加仓
-      else if (pct >= 0.04) multiplier = 0.7; // 涨幅>=4%减少投入
+      if (pct <= -0.02) multiplier = 1.5; // 跌幅>=2%加仓
+      else if (pct >= 0.02) multiplier = 0.7; // 涨幅>=2%减少投入
     }
     const investOpt = monthlyAmt * multiplier;
     const sharesBoughtOpt = investOpt / price;
@@ -1783,11 +1818,11 @@ const generateBacktestData = () => {
 
 // 初始化回测图表（使用 generateBacktestData 产生的精确序列）
 const initBacktestChart = () => {
-  // 销毁现有图表
+   // 销毁现有图表
   if (backtestChart.value) {
     backtestChart.value.destroy();
   }
-
+  
   // 必要数据检查
   if (!backtestInfo.value || !Array.isArray(backtestInfo.value.labels)) {
     console.warn('回测数据不完整，无法绘制图表');
@@ -1801,21 +1836,16 @@ const initBacktestChart = () => {
     console.warn('回测数据序列缺失:', missingData.join(', '));
     return;
   }
-
-  const labels = backtestInfo.value.labels.map(l => {
-    // 只在每6个月显示标签，避免拥挤
-    const parts = l.split('-');
-    const date = new Date(parts[0], parseInt(parts[1], 10) - 1, 1);
-    return date.getMonth() % 6 === 0 ? `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}` : '';
-  });
-
+ console.log('backtestInfo.value', backtestInfo.value);
+  const labels = backtestInfo.value.labels ||[]
   const baselineData = backtestInfo.value.baselineSeries || [];
   const normalData = backtestInfo.value.normalSeries || [];
   const optimizedData = backtestInfo.value.optimizedSeries || [];
 
-  const el = document.getElementById('backtest-chart');
-  const create = (ctx) => {
-    backtestChart.value = new Chart(ctx, {
+  
+  const ctx = backtestChartCanvas.value && backtestChartCanvas.value.getContext && backtestChartCanvas.value.getContext('2d');
+  if (!ctx) return;
+  backtestChart.value = new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
@@ -1887,21 +1917,8 @@ const initBacktestChart = () => {
         }
       }
     });
-  };
-
-  if (!el) {
-    nextTick(() => {
-      const el2 = document.getElementById('backtest-chart');
-      if (!el2) return;
-      const ctx2 = el2.getContext && el2.getContext('2d');
-      if (ctx2) create(ctx2);
-    });
-    return;
   }
-
-  const ctx = el.getContext('2d');
-  create(ctx);
-};
+ 
 
 // 获取市场数据
 // const fetchMarketData = () => {
@@ -2269,7 +2286,7 @@ const getMockMarketData = (marketId) => {
               optimized: 468.7,
               costReduction: 14.3
             }
-          },
+},
           bear: {
             title: '熊市阶段定投策略',
             period: '2021年11月 - 2022年12月',
@@ -2361,18 +2378,18 @@ const getMockMarketData = (marketId) => {
           },
           bear: {
             title: '熊市阶段定投策略',
-            period: '无明显熊市阶段',
-            core: '逆向布局，长期配置',
+            period: '2021年11月 - 2022年12月',
+            core: '谨慎加仓，控制节奏',
             points: [
-              '实际利率上升阶段减少定投至70%',
-              '美元指数走强时降低投入节奏',
-              '每下跌8%增加40%定投金额，黄金波动相对较小',
-              '作为组合对冲工具，保持基础仓位'
+              '采用6%跌幅加仓法：高波动市场适当提高阈值',
+              '将资金分为12份，避免过早用完子弹',
+              'PE分位低于25%时，基础定投金额提高至计划的130%',
+              '优先选择现金流稳定的科技巨头'
             ],
             performance: {
-              normal: -3.2,
-              optimized: 5.8,
-              costReduction: 6.3
+              normal: -32.8,
+              optimized: -12.5,
+              costReduction: 18.7
             }
           },
           volatile: {

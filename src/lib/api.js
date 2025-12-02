@@ -42,7 +42,7 @@ export const MarketAPI = {
    * 获取支持的市场列表
    */
   getMarkets() {
-    return apiClient.get('/fund_individual_basic_info_xq');
+    return apiClient.get('/fund_name_em');
   },
 
   /**
