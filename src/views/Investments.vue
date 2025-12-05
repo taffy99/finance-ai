@@ -1,6 +1,19 @@
   <!-- 投资分析页面 -->
 <template id="investments-page">
-    <div>
+    <div class="relative">
+      <!-- 全页 loading 覆盖层：当 overviewLoading 为 true 时显示，阻止页面交互 -->
+      <div v-if="overviewLoading" class="absolute inset-0 z-50 flex justify-center pt-80 bg-white/75 backdrop-blur-sm">
+        <div class="w-80">
+          <div class="mb-3 text-gray-700 text-center">页面数据加载中...</div>
+          <!-- 灰色渐变的不可知进度条：带左右移动和平滑亮度闪动 -->
+          <div class="h-3 w-full bg-gray-200 rounded-full overflow-hidden relative">
+            <!-- 填充条：从左向右动态增长 -->
+            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-gray-400 via-gray-350 to-gray-300 rounded-full progress-fill"></div>
+            <!-- 光泽层：在填充上方做一次性或循环的亮度滑动，用来模拟完成感 -->
+            <div class="absolute left-0 top-0 h-full w-1/3 progress-shine pointer-events-none"></div>
+          </div>
+        </div>
+      </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
           <h2 class="text-xl font-bold">投资分析</h2>
@@ -20,20 +33,20 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div class="card p-6">
           <p class="text-gray-500 text-sm">投资总额</p>
-          <h3 class="text-2xl font-bold mt-1">¥250,000</h3>
-          <p class="text-sm mt-2">较上月 <span class="text-green-500">+3.2%</span></p>
+          <h3 class="text-2xl font-bold mt-1">{{ investmentTotalDisplay }}</h3>
+          <p class="text-sm mt-2">较上月 <span :class="monthDeltaClass">{{ monthDeltaDisplay }}</span></p>
         </div>
         
         <div class="card p-6">
           <p class="text-gray-500 text-sm">累计收益</p>
-          <h3 class="text-2xl font-bold mt-1 text-green-500">¥32,500</h3>
-          <p class="text-sm mt-2">收益率 <span class="text-green-500">15%</span></p>
+          <h3 :class="['text-2xl font-bold mt-1', cumulativeProfitClass]">{{ cumulativeProfitDisplay }}</h3>
+          <p class="text-sm mt-2">收益率 <span :class="cumulativeReturnClass">{{ cumulativeReturnDisplay }}</span></p>
         </div>
         
         <div class="card p-6">
           <p class="text-gray-500 text-sm">本月收益</p>
-          <h3 class="text-2xl font-bold mt-1 text-green-500">¥4,250</h3>
-          <p class="text-sm mt-2">年化收益率 <span class="text-green-500">20.4%</span></p>
+          <h3 :class="['text-2xl font-bold mt-1', monthProfitClass]">{{ monthProfitDisplay }}</h3>
+          <p class="text-sm mt-2">年化收益率 <span :class="annualizedReturnClass">{{ annualizedReturnDisplay }}</span></p>
         </div>
       </div>
     
@@ -226,18 +239,19 @@
     </div>
   </template>
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import { investList, productTypeOptions} from '../mocks/investments.js'
-import { useProducts } from '../composables/useSupabase.js'
+import { useProducts, useInvestOverview } from '../composables/useSupabase.js'
 import InvestDetailModal from '../components/InvestDetailModal.vue'
 import { useRouter }  from 'vue-router'
 // 注册 Chart.js 组件
 Chart.register(...registerables)
-const investmentPortfolioChart = ref(null) //投资组合图表
-const investmentReturnsChart = ref(null) // 投资收益趋势图表
+const investmentPortfolioChart = ref(null) //投资组合图表 (canvas ref DOM)
+const portfolioChartInstance = ref(null) // 投资组合图表 Chart.js 实例
+const investmentReturnsChart = ref(null) // 投资收益趋势图表 (canvas ref)
+
 // 投资产品列表
-const investmentList = ref(investList)
+// const investmentList = ref(investList)
 
 // 根据productType动态切换列表首列icon css
 const rowIcontype = computed(()=>{
@@ -284,73 +298,196 @@ const toMultiStrategy = () => {
 
 // 获取后台数据库financial_products表数据
 const { products, loading:productsLoading,fetchProducts } = useProducts();
+// 获取后台数据库invest_overview表数据
+const { investOverview,loading:overviewLoading,fetchInvestOverview } = useInvestOverview();  
+
+const initializeChart = () => {
+  if (portfolioChartInstance.value) {
+    portfolioChartInstance.value.destroy()
+  }
+  // 按产品类型聚合：仅统计 purchase_date 属于最新月份的产品，生成 labels（类型名）和 data（每种类型的 total_amount 总和）
+  const productTypeAggregation = computed(() => {
+    const agg = {};
+    const list = products.value || [];
+
+    // 提取有效的 year-month 值（number: year*12 + monthIndex），并找到最大值表示最新月份
+    const monthValues = list
+      .map(p => {
+        if (!p || !p.purchase_date) return null;
+        const d = new Date(p.purchase_date);
+        if (isNaN(d)) return null;
+        return d.getFullYear() * 12 + d.getMonth();
+      })
+      .filter(v => v != null);
+
+    // 如果没有任何有效日期，退回到统计所有 products
+    let latestMonth = null;
+    if (monthValues.length > 0) {
+      latestMonth = Math.max(...monthValues);
+    }
+
+    // 计算聚合，只包含最新月份的数据（如果有）
+    list.forEach(p => {
+      const key = p.product_type_name || p.product_type || '其他';
+      const amt = Number(p.total_amount) || 0;
+
+      if (latestMonth == null) {
+        // 无有效日期，统计全部
+        agg[key] = (agg[key] || 0) + amt;
+      } else {
+        // 仅统计 purchase_date 在最新月份的项
+        if (p && p.purchase_date) {
+          const d = new Date(p.purchase_date);
+          if (!isNaN(d) && (d.getFullYear() * 12 + d.getMonth()) === latestMonth) {
+            agg[key] = (agg[key] || 0) + amt;
+          }
+        }
+      }
+    });
+
+    return agg;
+  });
+
+const productTypeLabels = computed(() => Object.keys(productTypeAggregation.value));
+const productTypeData = computed(() => productTypeLabels.value.map(k => productTypeAggregation.value[k] || 0));
+
+  // 颜色池（按需扩展）
+  const colorPalette = ['#3B82F6', '#10B981', '#8B5CF6', '#EF4444', '#F59E0B', '#06B6D4', '#F97316', '#A78BFA', '#F43F5E', '#64748B'];
+
+  // 创建图表
+  const ctx = investmentPortfolioChart.value && investmentPortfolioChart.value.getContext && investmentPortfolioChart.value.getContext('2d');
+  if (!ctx) return;
+  const bgColors = colorPalette.slice(0, productTypeLabels.value.length);
+  // 创建新的 Chart 实例
+  portfolioChartInstance.value = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: productTypeLabels.value,
+      datasets: [{
+        data: productTypeData.value,
+        backgroundColor: bgColors,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right' }
+      }
+    }
+  }); 
+};
+
+// 规范化并展示概览数据的便捷计算属性（防止字段缺失导致模版报错）
+const overview = computed(() => (investOverview.value && investOverview.value.length ? investOverview.value[0] : {}));
+const investmentTotalDisplay = computed(() => {
+  const v = overview.value['total_amount'];
+  return v != null ? `¥${v.toLocaleString()}` : '—';
+});
+
+const monthDeltaDisplay = computed(() => {
+  const v = overview.value['month_change_pct'];
+  if (v == null) return '';
+  const sign = v > 0 ? '+' : '';
+  return `${sign}${Number(v*100).toFixed(2)}%`;
+});
+
+const cumulativeProfitDisplay = computed(() => {
+  const v = overview.value['total_returns'];
+  return v != null ? `¥${v.toLocaleString()}` : '—';
+});
+
+const cumulativeReturnDisplay = computed(() => {
+  const v = overview.value['rate_returns'];
+  return v != null ? `${Number(v*100).toFixed(2)}%` : '—';
+});
+
+const monthProfitDisplay = computed(() => {
+  const v = overview.value['month_returns'];
+  return v != null ? `¥${v.toLocaleString()}` : '—';
+});
+
+const annualizedReturnDisplay = computed(() => {
+  const v = overview.value['annual_return'];
+  return v != null ? `${Number(v*100).toFixed(2)}%` : '—';
+});
+// 原始数值（用于判断正负），尽量使用原始字段，不做额外格式化
+const monthDeltaRaw = computed(() => {
+  const v = overview.value['month_change_pct'];
+  return v == null ? null : Number(v);
+});
+const cumulativeProfitRaw = computed(() => {
+  const v = overview.value['total_returns'];
+  return v == null ? null : Number(v);
+});
+const cumulativeReturnRaw = computed(() => {
+  const v = overview.value['rate_returns'];
+  return v == null ? null : Number(v);
+});
+const monthProfitRaw = computed(() => {
+  const v = overview.value['month_returns'];
+  return v == null ? null : Number(v);
+});
+const annualizedReturnRaw = computed(() => {
+  const v = overview.value['annual_return'];
+  return v == null ? null : Number(v);
+});
+
+// 根据原始数值返回 class
+const signClass = (raw) => {
+  if (raw == null) return 'text-gray-500';
+  if (raw > 0) return 'text-green-500';
+  if (raw < 0) return 'text-red-500';
+  return 'text-gray-500';
+};
+
+const monthDeltaClass = computed(() => signClass(monthDeltaRaw.value));
+const cumulativeProfitClass = computed(() => signClass(cumulativeProfitRaw.value));
+const cumulativeReturnClass = computed(() => signClass(cumulativeReturnRaw.value));
+const monthProfitClass = computed(() => signClass(monthProfitRaw.value));
+const annualizedReturnClass = computed(() => signClass(annualizedReturnRaw.value));
 // const productsLoading = ref(true)
+// const overviewLoading = ref(true)
 onMounted(()=>{
-  // 页面加载时获取产品列表
-  fetchProducts()
-  // 投资组合图表
-  const investmentPortfolioCtx = investmentPortfolioChart.value.getContext('2d')
-  if (investmentPortfolioCtx) {
-            new Chart(investmentPortfolioCtx, {
-              type: 'pie',
-              data: {
-                labels: ['理财产品', '指数基金', '混合基金', '股票', 'QDII基金'],
-                datasets: [{
-                  data: [80000, 60000, 50000, 40000, 20000],
-                  backgroundColor: [
-                    '#3B82F6',
-                    '#10B981',
-                    '#8B5CF6',
-                    '#EF4444',
-                    '#F59E0B'
-                  ],
-                  borderWidth: 0
-                }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'right',
-                  }
-                }
-              }
-            });
-          }
+  // 页面加载时获取产品列表和概览
+  fetchInvestOverview()
+  fetchProducts().then(()=>{
+    initializeChart();
+  })
   
-  // 投资收益趋势图表
-  const investmentReturnsCtx = investmentReturnsChart.value.getContext('2d')
+  // 投资收益趋势图表（保持原有静态数据）
+  const investmentReturnsCtx = investmentReturnsChart.value && investmentReturnsChart.value.getContext && investmentReturnsChart.value.getContext('2d')
   if (investmentReturnsCtx) {
-            new Chart(investmentReturnsCtx, {
-              type: 'line',
-              data: {
-                labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-                datasets: [{
-                  label: '投资总额',
-                  data: [200000, 205000, 210000, 215000, 220000, 225000, 230000, 235000, 240000, 245000, 250000, 250000],
-                  borderColor: '#3B82F6',
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  tension: 0.4,
-                  fill: true
-                }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'top',
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: false
-                  }
-                }
-              }
-            });
+    new Chart(investmentReturnsCtx, {
+      type: 'line',
+      data: {
+        labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+        datasets: [{
+          label: '投资总额',
+          data: [200000, 205000, 210000, 215000, 220000, 225000, 230000, 235000, 240000, 245000, 250000, 250000],
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          tension: 0.4,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
           }
+        },
+        scales: {
+          y: {
+            beginAtZero: false
+          }
+        }
+      }
+    });
+  }
 })
  // 列表分页
  const currentPage = ref(1) // 当前页码
@@ -422,5 +559,49 @@ onMounted(()=>{
 
 </script>
 <style scoped>
-    
+/* 不可知进度条的左右平移动画 */
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+.animate-indeterminate {
+  width: 50%; /* 条带可视宽度 */
+  animation: indeterminate 1.6s cubic-bezier(.2,.7,.2,.9) infinite;
+}
+
+/* 细微亮度闪动动画，使进度条看起来更有活力 */
+@keyframes pulse-bright {
+  0% { filter: brightness(0.95); }
+  50% { filter: brightness(1.12); }
+  100% { filter: brightness(0.95); }
+}
+.pulse-bright {
+  animation: pulse-bright 1.6s ease-in-out infinite;
+}
+
+/* 从左到右填充动画 */
+@keyframes progress-fill {
+  0% { width: 0%; }
+  70% { width: 100%; }
+  100% { width: 100%; }
+}
+.progress-fill {
+  width: 0%;
+  /* 使用 linear 让填充看起来持续平滑，时长可调节 */
+  animation: progress-fill 2.2s linear infinite;
+}
+
+/* 光泽滑动效果 */
+@keyframes shine-slide {
+  0% { transform: translateX(-120%); opacity: 0; }
+  10% { opacity: 0.12; }
+  50% { transform: translateX(50%); opacity: 0.22; }
+  100% { transform: translateX(220%); opacity: 0; }
+}
+.progress-shine {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0) 100%);
+  transform: translateX(-120%);
+  animation: shine-slide 2.2s ease-in-out infinite;
+}
 </style>

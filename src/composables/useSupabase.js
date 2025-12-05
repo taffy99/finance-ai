@@ -28,9 +28,36 @@ export function useProducts() {
       const { data, error } = await supabase
         .from('financial_products')
         .insert([productData])
-        .select(); // 返回插入的记录
+        .select('*'); // 返回插入的记录
       return { data, error };
     };
   
     return { products, loading, fetchProducts, addProduct };
   }
+ // 3. 理财产品概览相关功能
+  export function useInvestOverview() {
+    const investOverview = ref([]); // 产品列表
+    const loading = ref(false); // 加载状态
+  
+    // 获取理财产品
+    const fetchInvestOverview = async () => {
+      loading.value = true;
+      const { data, error } = await supabase
+        .from('invest_overview') // 表名
+        .select('*')
+        .order('invest_month', { ascending: false })
+        .limit(1)
+  
+      if (error) {
+        console.error('获取产品概览失败：', error);
+      } else {
+        investOverview.value = data || [];
+        console.log('获取产品概览成功', data);
+      }
+      loading.value = false;
+      return { data, error };
+    };
+  
+    return { investOverview, loading, fetchInvestOverview };
+  }
+    
