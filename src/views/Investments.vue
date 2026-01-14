@@ -2,7 +2,7 @@
 <template id="investments-page">
     <div class="relative">
       <!-- 全页 loading 覆盖层：当 overviewLoading 为 true 时显示，阻止页面交互 -->
-      <div v-if="overviewLoading" class="absolute inset-0 z-50 flex justify-center pt-80 bg-white/75 backdrop-blur-sm">
+      <div v-if="returnsLoading" class="absolute inset-0 z-50 flex justify-center pt-80 bg-white/75 backdrop-blur-sm">
         <div class="w-80">
           <div class="mb-3 text-gray-700 text-center">页面数据加载中...</div>
           <!-- 灰色渐变的不可知进度条：带左右移动和平滑亮度闪动 -->
@@ -68,8 +68,8 @@
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-semibold">投资收益趋势</h3>
             <div class="flex space-x-2">
-              <button class="btn btn-outline text-sm py-1 px-3">6月</button>
-              <button class="btn btn-primary text-sm py-1 px-3">1年</button>
+              <button class="btn btn-primary text-sm py-1 px-3">6月</button>
+              <button class="btn btn-outline text-sm py-1 px-3">1年</button>
               <button class="btn btn-outline text-sm py-1 px-3">3年</button>
             </div>
           </div>
@@ -219,8 +219,8 @@
                 <i class="fas fa-exclamation-triangle text-yellow-500"></i>
               </div>
               <div>
-                <h4 class="font-medium">风险提示</h4>
-                <p class="text-sm text-gray-600 mt-1">您的股票投资组合中，科技行业占比过高(65%)，建议适当分散投资于其他行业，降低行业集中风险。</p>
+                <h4 class="font-medium">（风险提示）投资认知避坑</h4>
+                <p class="text-sm text-gray-600 mt-1">投资认知避坑自查清单，包含加仓/减仓/止盈判断标准+基金/股票专项</p>
                 <button class="text-yellow-500 text-sm mt-2 flex items-center">
                   查看详情 <i class="fas fa-chevron-right ml-1 text-xs"></i>
                 </button>
@@ -241,14 +241,15 @@
 <script setup>
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import { useProducts, useInvestOverview } from '../composables/useSupabase.js'
+import { useProducts, useInvestOverview, useHistoricalReturns } from '../composables/useSupabase.js'
 import InvestDetailModal from '../components/InvestDetailModal.vue'
 import { useRouter }  from 'vue-router'
 // 注册 Chart.js 组件
 Chart.register(...registerables)
 const investmentPortfolioChart = ref(null) //投资组合图表 (canvas ref DOM)
 const portfolioChartInstance = ref(null) // 投资组合图表 Chart.js 实例
-const investmentReturnsChart = ref(null) // 投资收益趋势图表 (canvas ref)
+const investmentReturnsChart = ref(null) // 投资收益趋势图表 (canvas ref dom)
+const returnsChartInstance = ref(null) // 投资收益趋势图表 Chart.js 实例
 
 // 投资产品列表
 // const investmentList = ref(investList)
@@ -297,11 +298,12 @@ const toMultiStrategy = () => {
 
 
 // 获取后台数据库financial_products表数据
-const { products, loading:productsLoading,fetchProducts } = useProducts();
-// 获取后台数据库invest_overview表数据
-const { investOverview,loading:overviewLoading,fetchInvestOverview } = useInvestOverview();  
+const { products, loading:productsLoading,fetchProducts } = useProducts(); 
+// 获取后台数据库historical_returns表数据
+const { historicalReturns,loading:returnsLoading,fetchHistoricalReturns } = useHistoricalReturns();  
 
-const initializeChart = () => {
+// 初始化投资组合图表
+const initializePortfolioChart = () => {
   if (portfolioChartInstance.value) {
     portfolioChartInstance.value.destroy()
   }
@@ -379,8 +381,59 @@ const productTypeData = computed(() => productTypeLabels.value.map(k => productT
   }); 
 };
 
+const initializeReturnsChart = () => {
+  if (returnsChartInstance.value) {
+    returnsChartInstance.value.destroy()
+  }
+  const sortedReturns = computed(() => [...historicalReturns.value].sort((a, b) => new Date(a.invest_month) - new Date(b.invest_month)))
+  const returnLabels = sortedReturns.value.map(item => item.invest_month)
+  const returnTotalAmount = sortedReturns.value.map(item => item.total_amount)
+  const retuenProfitAmount = sortedReturns.value.map(item => item.total_returns)
+  // 投资收益趋势图表（保持原有静态数据）
+  const investmentReturnsCtx = investmentReturnsChart.value && investmentReturnsChart.value.getContext && investmentReturnsChart.value.getContext('2d')
+  if (!investmentReturnsCtx)  return;
+  
+  // 创建新的 Chart 实例
+  returnsChartInstance.value = new Chart(investmentReturnsCtx, {
+      type: 'line',
+      data: {
+        labels: returnLabels,
+        datasets: [{
+          label: '投资总额',
+          data: returnTotalAmount,
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          tension: 0.4,
+          fill: true
+        },{
+          label: '累计收益',
+          data: retuenProfitAmount,
+          borderColor: '#10B981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          tension: 0.4,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: false
+          }
+        }
+      }
+    });
+}
+
+
 // 规范化并展示概览数据的便捷计算属性（防止字段缺失导致模版报错）
-const overview = computed(() => (investOverview.value && investOverview.value.length ? investOverview.value[0] : {}));
+const overview = computed(() => (historicalReturns.value && historicalReturns.value.length ? historicalReturns.value[0] : {}));
 const investmentTotalDisplay = computed(() => {
   const v = overview.value['total_amount'];
   return v != null ? `¥${v.toLocaleString()}` : '—';
@@ -450,44 +503,13 @@ const annualizedReturnClass = computed(() => signClass(annualizedReturnRaw.value
 // const productsLoading = ref(true)
 // const overviewLoading = ref(true)
 onMounted(()=>{
-  // 页面加载时获取产品列表和概览
-  fetchInvestOverview()
+  fetchHistoricalReturns().then(()=>{
+    initializeReturnsChart();
+  })
   fetchProducts().then(()=>{
-    initializeChart();
+    initializePortfolioChart();
   })
   
-  // 投资收益趋势图表（保持原有静态数据）
-  const investmentReturnsCtx = investmentReturnsChart.value && investmentReturnsChart.value.getContext && investmentReturnsChart.value.getContext('2d')
-  if (investmentReturnsCtx) {
-    new Chart(investmentReturnsCtx, {
-      type: 'line',
-      data: {
-        labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-        datasets: [{
-          label: '投资总额',
-          data: [200000, 205000, 210000, 215000, 220000, 225000, 230000, 235000, 240000, 245000, 250000, 250000],
-          borderColor: '#3B82F6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          tension: 0.4,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'top',
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: false
-          }
-        }
-      }
-    });
-  }
 })
  // 列表分页
  const currentPage = ref(1) // 当前页码

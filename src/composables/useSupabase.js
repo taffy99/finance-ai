@@ -60,4 +60,29 @@ export function useProducts() {
   
     return { investOverview, loading, fetchInvestOverview };
   }
+
+  // 获取历史收益数据
+  export function useHistoricalReturns() {
+    const historicalReturns = ref([]); // 历史收益数据
+    const loading = ref(false); // 加载状态
+  
+    const fetchHistoricalReturns = async () => {
+      loading.value = true;
+      const { data, error } = await supabase
+        .from('invest_overview') // 表名
+        .select('*')
+        .order('invest_month', { ascending: false });
+  
+      if (error) {
+        console.error('获取历史收益数据失败：', error);
+      } else {
+        historicalReturns.value = data || [];
+        console.log('获取历史收益数据成功', data);
+      }
+      loading.value = false;
+      return { data, error };
+    };
+  
+    return { historicalReturns, loading, fetchHistoricalReturns };
+  }
     
