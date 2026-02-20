@@ -160,7 +160,6 @@
               <h2 class="text-2xl font-bold" id="trend-title">
                 {{ currentMarketInfo.fullName }} ({{ formatDate(startDate) }}-{{ formatDate(endDate) }}) 市场趋势分析
               </h2>
-              <p class="text-neutral mt-1">基于宏观经济、市场数据和情绪指标的综合判断</p>
             </div>
             <div class="mt-4 md:mt-0 flex items-center space-x-4">
               <div class="flex items-center">
@@ -1194,6 +1193,67 @@ const initMarketTrendChart = () => {
       };
     }
   });
+      // 趋势图表颜色定义
+    const COLORS = {
+      bull: { border: '#06B62A', point: '#06B62A', bg: 'rgba(6,182,42,0.08)' },
+      volatile: { border: '#FF7D00', point: '#FF7D00', bg: 'rgba(255,125,0,0.08)' },
+      bear: { border: '#F53F3F', point: '#F53F3F', bg: 'rgba(245,63,63,0.08)' }
+    };
+
+    // 计算每一段（前后两点）增长率并返回分类： 'bull' | 'volatile' | 'bear'
+    const classifyChange = (prev, curr) => {
+      if (prev == null || prev === 0) return 'volatile';
+      const rate = (curr - prev) / Math.abs(prev);
+      if (rate > 0.07) return 'bull';
+      if (rate < -0.07) return 'bear';
+      return 'volatile';
+    };
+
+    // 生成每个点的 pointBackgroundColor（根据与前一个点的变化分类）
+    const pointBgColors = filteredData.map((v, idx) => {
+      if (idx === 0) {
+        // 首点没有前向比较，取与下一点的分类（若存在），否则 volatile
+        if (filteredData.length > 1) {
+          return COLORS[classifyChange(filteredData[0], filteredData[1])].point;
+        }
+        return COLORS.volatile.point;
+      }
+      const cls = classifyChange(filteredData[idx - 1], v);
+      return COLORS[cls].point;
+    });
+
+    // 生成每个点的 pointBorderColor，使点的边框颜色与相邻线段保持一致（使用与点相关的前一段分类）
+    const pointBorderColors = filteredData.map((v, idx) => {
+      if (idx === 0) {
+        if (filteredData.length > 1) {
+          return COLORS[classifyChange(filteredData[0], filteredData[1])].border;
+        }
+        return COLORS.volatile.border;
+      }
+      const cls = classifyChange(filteredData[idx - 1], v);
+      return COLORS[cls].border;
+    });
+
+    // 使用 segment 回调为每个线段设置 borderColor / backgroundColor
+    const segmentOptions = {
+      borderColor: ctxSeg => {
+        const i0 = ctxSeg.p0DataIndex;
+        const i1 = ctxSeg.p1DataIndex;
+        const prev = filteredData[i0];
+        const curr = filteredData[i1];
+        const cls = classifyChange(prev, curr);
+        return COLORS[cls].border;
+      },
+      backgroundColor: ctxSeg => {
+        // 填充颜色用于 segment 的填充区域
+        const i0 = ctxSeg.p0DataIndex;
+        const i1 = ctxSeg.p1DataIndex;
+        const prev = filteredData[i0];
+        const curr = filteredData[i1];
+        const cls = classifyChange(prev, curr);
+        return COLORS[cls].bg;
+      }
+    };
 
   marketTrendChart.value = new Chart(ctx, {
     type: 'line',
@@ -1207,8 +1267,15 @@ const initMarketTrendChart = () => {
         borderWidth: 2,
         fill: true,
         tension: 0.3,
-        pointBackgroundColor: '#165DFF',
-        pointRadius: 2
+        pointBackgroundColor: pointBgColors,
+        pointBorderColor: pointBorderColors,
+        pointBorderWidth: 2,
+        pointRadius: 3,
+        // hover styles: 边框颜色与线段一致，并放大点半径与边框宽度
+        pointHoverBorderColor: pointBorderColors,
+        pointHoverBorderWidth: 4,
+        pointHoverRadius: 6,
+        segment: segmentOptions
       }]
     },
     options: {
@@ -1226,6 +1293,26 @@ const initMarketTrendChart = () => {
           callbacks: {
             title: function(tooltipItems) {
               return tooltipItems[0].label;
+            },
+            label: function(context) {
+              try {
+                const idx = context.dataIndex;
+                const dataset = context.dataset || {};
+                const dataArr = dataset.data || filteredData;
+                const curr = Number(context.raw != null ? context.raw : dataArr[idx]);
+                const prev = (idx > 0) ? Number(dataArr[idx - 1]) : null;
+                let pctStr = '—';
+                if (prev != null && prev !== 0 && !isNaN(prev) && !isNaN(curr)) {
+                  const pct = (curr - prev) / Math.abs(prev);
+                  const sign = pct > 0 ? '+' : '';
+                  pctStr = `${sign}${(pct * 100).toFixed(2)}%`;
+                }
+                const valStr = isNaN(curr) ? String(curr) : curr.toLocaleString('zh-CN');
+                const label = dataset.label || '';
+                return `${label}: ¥ ${valStr}  (${pctStr})`;
+              } catch (e) {
+                return context.dataset && context.dataset.label ? `${context.dataset.label}: ${context.raw}` : String(context.raw);
+              }
             }
           }
         },

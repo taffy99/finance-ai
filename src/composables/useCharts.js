@@ -46,6 +46,57 @@ export function useCharts() {
     };
 
     const ctx = canvas.getContext('2d');
+
+    // 颜色定义
+    const COLORS = {
+      bull: { border: '#06B62A', point: '#06B62A', bg: 'rgba(6,182,42,0.08)' },
+      volatile: { border: '#FF7D00', point: '#FF7D00', bg: 'rgba(255,125,0,0.08)' },
+      bear: { border: '#F53F3F', point: '#F53F3F', bg: 'rgba(245,63,63,0.08)' }
+    };
+
+    // 计算每一段（前后两点）增长率并返回分类： 'bull' | 'volatile' | 'bear'
+    const classifyChange = (prev, curr) => {
+      if (prev == null || prev === 0) return 'volatile';
+      const rate = (curr - prev) / Math.abs(prev);
+      if (rate > 0.07) return 'bull';
+      if (rate < -0.07) return 'bear';
+      return 'volatile';
+    };
+
+    // 生成每个点的 pointBackgroundColor（根据与前一个点的变化分类）
+    const pointBgColors = filteredData.map((v, idx) => {
+      if (idx === 0) {
+        // 首点没有前向比较，取与下一点的分类（若存在），否则 volatile
+        if (filteredData.length > 1) {
+          return COLORS[classifyChange(filteredData[0], filteredData[1])].point;
+        }
+        return COLORS.volatile.point;
+      }
+      const cls = classifyChange(filteredData[idx - 1], v);
+      return COLORS[cls].point;
+    });
+
+    // 使用 segment 回调为每个线段设置 borderColor / backgroundColor
+    const segmentOptions = {
+      borderColor: ctxSeg => {
+        const i0 = ctxSeg.p0DataIndex;
+        const i1 = ctxSeg.p1DataIndex;
+        const prev = filteredData[i0];
+        const curr = filteredData[i1];
+        const cls = classifyChange(prev, curr);
+        return COLORS[cls].border;
+      },
+      backgroundColor: ctxSeg => {
+        // 填充颜色用于 segment 的填充区域
+        const i0 = ctxSeg.p0DataIndex;
+        const i1 = ctxSeg.p1DataIndex;
+        const prev = filteredData[i0];
+        const curr = filteredData[i1];
+        const cls = classifyChange(prev, curr);
+        return COLORS[cls].bg;
+      }
+    };
+
     marketTrendChart.value = new Chart(ctx, {
       type: 'line',
       data: {
@@ -53,13 +104,16 @@ export function useCharts() {
         datasets: [{
           label: data.name,
           data: filteredData,
+          // 默认颜色（会被 segment 覆盖）
           borderColor: '#165DFF',
-          backgroundColor: 'rgba(22, 93, 255, 0.1)',
+          backgroundColor: 'rgba(22, 93, 255, 0.06)',
           borderWidth: 2,
           fill: true,
           tension: 0.3,
-          pointBackgroundColor: '#165DFF',
-          pointRadius: 2
+          // 每个点的背景色
+          pointBackgroundColor: pointBgColors,
+          pointRadius: 3,
+          segment: segmentOptions
         }]
       },
       options: {
