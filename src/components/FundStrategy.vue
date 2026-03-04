@@ -553,8 +553,8 @@ const drawBacktestChart = () => {
         {
           label: '网格策略收益',
           data: strategyData,
-          borderColor: '#3B82F6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderColor: '#7C3AED',
+          backgroundColor: 'rgba(124, 58, 237, 0.1)',
           fill: true,
           tension: 0.3,
           borderWidth: 2

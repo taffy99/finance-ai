@@ -1,6 +1,7 @@
 <template>
-     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" v-if="showAddInvestModal">
-      <div class="bg-white rounded-lg w-full max-w-md mx-4 max-h-[calc(100vh-20px)] overflow-y-auto">
+  <transition name="slide-fade">
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 z-50" v-if="showAddInvestModal">
+      <div class="bg-white rounded-lg w-full max-w-md mx-4 mt-10 max-h-[calc(100vh-20px)] overflow-y-auto">
         <div class="p-6">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl font-bold">
@@ -296,6 +297,7 @@
         </div>
       </div>
     </div>
+  </transition>
 </template>
 <script setup>
 import { ref, computed,watch } from 'vue'
@@ -654,27 +656,27 @@ watch(() => {}, cleanup, { once: true });
         --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
         --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
         box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
-        --tw-ring-color: rgba(59, 130, 246, 0.5);
+        --tw-ring-color: rgba(124, 58, 237, 0.5);
         --tw-ring-offset-width: 0px;
         --tw-ring-inset: inset;
-        border-color: #3b82f6;
+        border-color: var(--primary);
       }
       .dropdown-item-hover {
         cursor: pointer;
       }
       .dropdown-item-hover:hover {
-        background-color: rgba(59, 130, 246, 0.1);
-        color: #3b82f6;
+        background-color: rgba(124, 58, 237, 0.1);
+        color: var(--primary);
       }
       .date-cell-hover {
         cursor: pointer;
       }
       .date-cell-hover:hover {
-        background-color: rgba(59, 130, 246, 0.1);
+        background-color: rgba(124, 58, 237, 0.1);
         border-radius: 9999px;
       }
       .date-cell-active {
-        background-color: #3b82f6;
+        background-color: var(--primary);
         color: white;
         border-radius: 9999px;
       }
@@ -711,4 +713,18 @@ watch(() => {}, cleanup, { once: true });
     .form-group .relative input:focus + .input-icon-container .input-icon {
       transform: none;
     }
+
+
+/* modal slide fade transition */
+.slide-fade-enter-active, .slide-fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.slide-fade-enter-from, .slide-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+.slide-fade-enter-to, .slide-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
 </style>

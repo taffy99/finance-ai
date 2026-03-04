@@ -6,7 +6,7 @@
     <aside class="sidebar bg-white shadow-lg h-auto md:h-screen fixed md:sticky top-0 left-0 z-10 transition-all" :class="sidebarCollapsed ? 'sidebar-collapsed' : ''">
       <div class="p-4 flex items-center justify-between">
         <div class="flex items-center">
-          <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+          <div class="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white">
             <i class="fas fa-chart-pie"></i>
           </div>
           <h1 class="ml-3 text-xl font-bold" v-if="!sidebarCollapsed">AI理财助手</h1>
@@ -18,7 +18,7 @@
       <nav class="sidebar-menu">
         <router-link 
           to="/dashboard" 
-          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-blue-500"
+          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-purple-500"
           :class="isActive('dashboard') ? 'active' : ''"
         >
           <i class="fas fa-tachometer-alt w-6"></i>
@@ -26,7 +26,7 @@
         </router-link>
         <router-link 
           to="/transactions" 
-          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-blue-500"
+          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-purple-500"
           :class="isActive('transactions') ? 'active' : ''"
         >
           <i class="fas fa-exchange-alt w-6"></i>
@@ -34,7 +34,7 @@
         </router-link>
         <router-link 
           to="/budget" 
-          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-blue-500"
+          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-purple-500"
           :class="isActive('budget') ? 'active' : ''"
         >
           <i class="fas fa-piggy-bank w-6"></i>
@@ -42,7 +42,7 @@
         </router-link>
         <router-link 
           to="/investments" 
-          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-blue-500"
+          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-purple-500"
           :class="isActive('investments') ? 'active' : ''"
         >
           <i class="fas fa-chart-line w-6"></i>
@@ -50,7 +50,7 @@
         </router-link>
         <router-link 
           to="/reports" 
-          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-blue-500"
+          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-purple-500"
           :class="isActive('reports') ? 'active' : ''"
         >
           <i class="fas fa-file-alt w-6"></i>
@@ -58,7 +58,7 @@
         </router-link>
         <router-link 
           to="/ai-assistant" 
-          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-blue-500"
+          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-purple-500"
           :class="isActive('ai-assistant') ? 'active' : ''"
         >
           <i class="fas fa-robot w-6"></i>
@@ -66,7 +66,7 @@
         </router-link>
         <router-link 
           to="/settings" 
-          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-blue-500"
+          class="sidebar-item flex items-center p-4 text-gray-700 hover:text-purple-500"
           :class="isActive('settings') ? 'active' : ''"
         >
           <i class="fas fa-cog w-6"></i>

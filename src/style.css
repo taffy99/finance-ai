@@ -3,25 +3,31 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background-color: #F9FAFB;
+    /* vertical gradient from light lavender to a slightly deeper tone, with soft transparency */
+    background: linear-gradient(to bottom, rgb(246, 240, 251) 0%, rgb(240, 225, 252) 100%);
+    background-color: #F3E8FF; /* fallback */
     color: #1F2937;
+    /* optional light frosted blur over the gradient */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
   :root {
-    --primary: #3B82F6;
-    --primary-light: #60A5FA;
-    --primary-dark: #2563EB;
-    --success: #10B981;
-    --danger: #EF4444;
-    --warning: #F59E0B;
-    --info: #3B82F6;
-    --light: #F9FAFB;
+    /* pastel purple-focused palette for lighter overall tone */
+    --primary: #A78BFA;          /* pastel purple */
+    --primary-light: #E0AAFF;    /* very light lavender */
+    --primary-dark: #8B5CF6;     /* moderately deep purple */
+    --success: #86EFAC;          /* pastel green */
+    --danger: #FCA5A5;           /* light red */
+    --warning: #FDE68A;          /* light yellow */
+    --info: #A78BFA;             /* same as primary */
+    --light: #FFFFFF;            /* pure white cards */
     --dark: #1F2937;
-    --gray: #6B7280;
-    --gray-light: #E5E7EB;
-    --gray-dark: #374151;
+    --gray: #9CA3AF;
+    --gray-light: #F3F4F6;
+    --gray-dark: #6B7280;
   }
   .card {
-    background: white;
+    background: var(--light);
     border-radius: 12px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -48,15 +54,24 @@ body {
   
   .sidebar-item {
     transition: all 0.2s ease;
+    color: var(--gray-dark);
   }
   
   .sidebar-item:hover {
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: rgba(124, 58, 237, 0.1); /* light purple hover */
+    color: var(--primary);
   }
   
   .sidebar-item.active {
-    background-color: rgba(59, 130, 246, 0.2);
-    border-left: 4px solid #3B82F6;
+    background-color: rgba(124, 58, 237, 0.2);
+    border-left: 4px solid var(--primary);
+    color: var(--primary-dark) !important;
+  }
+  
+  /* ensure icon and text within item inherit the color */
+  .sidebar-item i,
+  .sidebar-item span {
+    color: inherit;
   }
   .btn {
     padding: 0.5rem 1rem;

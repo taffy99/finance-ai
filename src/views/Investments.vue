@@ -20,7 +20,7 @@
           <p class="text-gray-500">管理和分析您的投资组合</p>
         </div>
         <div class="mt-4 md:mt-0 flex space-x-3">
-          <button class="btn btn-outline" @click="showAddModal">
+          <button class="btn rounded-full bg-white border border-purple-500 text-purple-500 hover:bg-purple-100" @click="showAddModal">
             <i class="fas fa-plus mr-2"></i> 添加投资
           </button>
           <button class="btn btn-primary">
@@ -34,19 +34,19 @@
         <div class="card p-6">
           <p class="text-gray-500 text-sm">投资总额</p>
           <h3 class="text-2xl font-bold mt-1">{{ investmentTotalDisplay }}</h3>
-          <p class="text-sm mt-2">较上月 <span :class="monthDeltaClass">{{ monthDeltaDisplay }}</span></p>
+            <p class="text-sm mt-2">年化收益率 <span :class="annualizedReturnClass">{{ annualizedReturnDisplay }}</span></p>
         </div>
         
         <div class="card p-6">
-          <p class="text-gray-500 text-sm">累计收益</p>
+          <p class="text-gray-500 text-sm">当年累计收益</p>
           <h3 :class="['text-2xl font-bold mt-1', cumulativeProfitClass]">{{ cumulativeProfitDisplay }}</h3>
           <p class="text-sm mt-2">收益率 <span :class="cumulativeReturnClass">{{ cumulativeReturnDisplay }}</span></p>
         </div>
         
         <div class="card p-6">
-          <p class="text-gray-500 text-sm">本月收益</p>
+          <p class="text-gray-500 text-sm">当月收益</p>
           <h3 :class="['text-2xl font-bold mt-1', monthProfitClass]">{{ monthProfitDisplay }}</h3>
-          <p class="text-sm mt-2">年化收益率 <span :class="annualizedReturnClass">{{ annualizedReturnDisplay }}</span></p>
+          <p class="text-sm mt-2">较上月 <span :class="monthDeltaClass">{{ monthDeltaDisplay }}</span></p>
         </div>
       </div>
     
@@ -59,7 +59,7 @@
             <button class="text-blue-500 text-sm">调整配置</button>
           </div>
           <div class="chart-container">
-            <canvas ref="investmentPortfolioChart"></canvas>
+              <canvas ref="investmentPortfolioChart"></canvas>
           </div>
         </div>
         
@@ -98,17 +98,17 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <!-- loading加载状态 -->
-                <div v-if="productsLoading" class="col-span-full text-center py-12" style="position: relative; left: 200%;">
+              <!-- loading or empty state rows -->
+              <tr v-if="productsLoading">
+                <td colspan="7" class="text-center py-12">
                   <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
                   <p class="mt-2 text-gray-500">加载中...</p>
-                </div>
-
-                <!-- 空状态 -->
-                <div v-else-if="filteredProducts.length === 0" class="col-span-full text-center py-12 text-gray-500" style="position: relative; left: 200%;">
+                </td>
+              </tr>
+              <tr v-else-if="filteredProducts.length === 0">
+                <td colspan="7" class="text-center py-12 text-gray-500">
                   暂无理财产品
-                </div>
+                </td>
               </tr>
               
             
@@ -354,17 +354,23 @@ const productTypeLabels = computed(() => Object.keys(productTypeAggregation.valu
 const productTypeData = computed(() => productTypeLabels.value.map(k => productTypeAggregation.value[k] || 0));
 
   // 颜色池（按需扩展）
-  const colorPalette = ['#3B82F6', '#10B981', '#8B5CF6', '#EF4444', '#F59E0B', '#06B6D4', '#F97316', '#A78BFA', '#F43F5E', '#64748B'];
+  // pastel palette for pie slices
+  const colorPalette = ['#C4B5FD', '#A7F3D0', '#FBCFE8', '#FEF3C7', '#FECACA', '#BFDBFE', '#FDE68A', '#D1FAE5', '#FEE2E2', '#E5E7EB'];
 
   // 创建图表
   const ctx = investmentPortfolioChart.value && investmentPortfolioChart.value.getContext && investmentPortfolioChart.value.getContext('2d');
   if (!ctx) return;
   const bgColors = colorPalette.slice(0, productTypeLabels.value.length);
+  // 将每个类型标签扩展为带金额的显示，例如 "指数基金 - ¥60,000"
+  const formattedLabels = productTypeLabels.value.map((lbl, idx) => {
+    const amt = Number(productTypeData.value[idx]) || 0;
+    return `${lbl} - ¥${amt.toLocaleString('zh-CN')}`;
+  });
   // 创建新的 Chart 实例
   portfolioChartInstance.value = new Chart(ctx, {
     type: 'pie',
     data: {
-      labels: productTypeLabels.value,
+      labels: formattedLabels,
       datasets: [{
         data: productTypeData.value,
         backgroundColor: bgColors,
@@ -401,15 +407,15 @@ const initializeReturnsChart = () => {
         datasets: [{
           label: '投资总额',
           data: returnTotalAmount,
-          borderColor: '#3B82F6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderColor: '#A78BFA',
+          backgroundColor: 'rgba(167, 139, 250, 0.1)',
           tension: 0.4,
           fill: true
         },{
           label: '累计收益',
           data: retuenProfitAmount,
-          borderColor: '#10B981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderColor: '#86EFAC',
+          backgroundColor: 'rgba(134, 239, 172, 0.1)',
           tension: 0.4,
           fill: true
         }]

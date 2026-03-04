@@ -206,7 +206,7 @@
                   {
                     label: '结余',
                     data: [2700, 3000, 2300, 3600, 4100, 4240],
-                    borderColor: '#3B82F6',
+                    borderColor: '#7C3AED',
                     backgroundColor: 'transparent',
                     tension: 0.4
                   }
@@ -241,7 +241,7 @@
                   backgroundColor: [
                     '#EF4444',
                     '#F59E0B',
-                    '#3B82F6',
+                    '#7C3AED',
                     '#8B5CF6',
                     '#10B981',
                     '#EC4899',

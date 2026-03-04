@@ -244,7 +244,7 @@
                   {
                     label: '预算',
                     data: [11000, 11500, 11200, 12000, 11800, 12000],
-                    backgroundColor: '#3B82F6',
+                    backgroundColor: '#7C3AED',
                     barPercentage: 0.6,
                     categoryPercentage: 0.7
                   },
