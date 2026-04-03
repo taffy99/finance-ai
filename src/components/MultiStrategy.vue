@@ -1,21 +1,21 @@
 <template>
   <div class="min-h-screen bg-gray-50 font-inter text-dark">
-    <!-- 顶部导航 -->
-    <header class="gradient-bg text-white shadow-md rounded-b-xl sticky top-0 z-30">
-      <div class="container mx-auto px-4 py-4 md:py-6">
+    <!-- 顶部导航（与“分析市场”按钮一致的主色卡片风格） -->
+    <header class="sticky top-0 z-30">
+      <div class="bg-primary text-white rounded-xl shadow-lg shadow-primary/20 container mx-auto px-4 py-4 md:py-5">
         <div class="flex flex-col md:flex-row items-center justify-between gap-4">
           <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-lg bg-white/10 flex items-center justify-center">
-              <i class="fa fa-line-chart text-2xl"></i>
+            <div class="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/10">
+              <i class="fa fa-line-chart text-white text-2xl"></i>
             </div>
             <div>
-              <h1 class="text-[clamp(1.25rem,2.4vw,2rem)] font-bold tracking-tight">智能定投策略分析工具</h1>
+              <h1 class="text-[clamp(1.25rem,2.2vw,1.75rem)] font-bold text-white">智能定投策略分析工具</h1>
               <p class="text-white/80 mt-1 text-sm">多市场分析 · 智能策略 · 收益优化</p>
             </div>
           </div>
 
           <div class="flex items-center space-x-3">
-            <div v-if="lastUpdated" class="text-sm bg-white/10 px-3 py-2 rounded-full flex items-center gap-2">
+            <div v-if="lastUpdated" class="text-sm text-white/90 px-3 py-2 rounded-full flex items-center gap-2 bg-white/06 border border-white/06">
               <i class="fa fa-clock-o"></i>
               <span>更新: {{ lastUpdated }}</span>
             </div>

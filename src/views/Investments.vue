@@ -2,16 +2,14 @@
 <template id="investments-page">
     <div class="relative">
       <!-- 全页 loading 覆盖层：当 overviewLoading 为 true 时显示，阻止页面交互 -->
-      <div v-if="returnsLoading" class="absolute inset-0 z-50 flex justify-center pt-80 bg-white/75 backdrop-blur-sm">
-        <div class="w-80">
-          <div class="mb-3 text-gray-700 text-center">页面数据加载中...</div>
-          <!-- 灰色渐变的不可知进度条：带左右移动和平滑亮度闪动 -->
-          <div class="h-3 w-full bg-gray-200 rounded-full overflow-hidden relative">
-            <!-- 填充条：从左向右动态增长 -->
-            <div class="absolute left-0 top-0 h-full bg-gradient-to-r from-gray-400 via-gray-350 to-gray-300 rounded-full progress-fill"></div>
-            <!-- 光泽层：在填充上方做一次性或循环的亮度滑动，用来模拟完成感 -->
-            <div class="absolute left-0 top-0 h-full w-1/3 progress-shine pointer-events-none"></div>
+      <div v-if="returnsLoading" class="absolute inset-0 z-50 flex loader-overlay justify-center bg-white/60 backdrop-blur-sm">
+        <div class="flex flex-col items-center">
+          <div class="loader-dots" role="status" aria-label="页面加载中">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="dot" aria-hidden="true"></span>
+            <span class="dot" aria-hidden="true"></span>
           </div>
+          <div class="loader-text">页面数据加载中...</div>
         </div>
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -81,8 +79,23 @@
     
       <!-- 投资产品列表 -->
       <div class="card overflow-hidden mb-6">
-        <div class="p-4 border-b">
+        <div class="p-4 border-b md:flex md:items-center md:justify-between gap-4">
           <h3 class="text-lg font-semibold">投资产品</h3>
+          <div class="flex flex-wrap items-center gap-3 mt-3 md:mt-0">
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-gray-600">产品类型：</label>
+              <select v-model="selectedType" @change="currentPage = 1" class="filter-select">
+                <option v-for="type in productTypes" :key="type" :value="type">{{ type }}</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-gray-600">日期排序：</label>
+              <select v-model="dateSortOrder" @change="currentPage = 1" class="filter-select">
+                <option value="desc">最新到最旧</option>
+                <option value="asc">最旧到最新</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full">
@@ -143,7 +156,7 @@
             <select 
               v-model="pageSize" 
               @change="handlePageSizeChange"
-              class="border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500"
+              class="filter-select filter-select--small"
             >
               <option value="5">5 条</option>
               <option value="10">10 条</option>
@@ -239,7 +252,7 @@
     </div>
   </template>
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import { useProducts, useInvestOverview, useHistoricalReturns } from '../composables/useSupabase.js'
 import InvestDetailModal from '../components/InvestDetailModal.vue'
@@ -517,20 +530,47 @@ onMounted(()=>{
   })
   
 })
+
+// 过滤与排序变量
+const selectedType = ref('全部')
+const dateSortOrder = ref('desc') // 默认按日期降序（新到旧）
+
+const productTypes = computed(() => {
+  const types = new Set((products.value || []).map(p => p.product_type_name || p.product_type || '其他'));
+  return ['全部', ...types];
+})
+
+const filteredAndSorted = computed(() => {
+  let list = (products.value || []).slice();
+
+  if (selectedType.value && selectedType.value !== '全部') {
+    list = list.filter(p => (p.product_type_name || p.product_type || '其他') === selectedType.value);
+  }
+
+  list.sort((a, b) => {
+    const dateA = a.purchase_date ? new Date(a.purchase_date).getTime() : 0;
+    const dateB = b.purchase_date ? new Date(b.purchase_date).getTime() : 0;
+    if (isNaN(dateA) || isNaN(dateB)) return 0;
+    return dateSortOrder.value === 'asc' ? dateA - dateB : dateB - dateA;
+  });
+
+  return list;
+})
+
  // 列表分页
  const currentPage = ref(1) // 当前页码
  const pageSize = ref(5) // 每页显示条数（默认5条）
   // 总条数
-  const totalItems = computed(()=>products.value.length)
+  const totalItems = computed(()=>filteredAndSorted.value.length)
   // 总页面数
   const totalPages = computed(()=>{
-    return Math.ceil(totalItems.value/pageSize.value)
+    return Math.max(1, Math.ceil(totalItems.value/pageSize.value))
   })
   // 当前页显示的产品
   const filteredProducts = computed(() => {
     const startIndex = (currentPage.value - 1) * pageSize.value;
     const endIndex = startIndex + pageSize.value;
-    return products.value.slice(startIndex, endIndex);
+    return filteredAndSorted.value.slice(startIndex, endIndex);
   });
  // 当前页面起始编号
   const currentStartIndex = computed(()=>{
@@ -585,6 +625,13 @@ onMounted(()=>{
     return visiblePages.value.length > 0 && visiblePages.value[visiblePages.value.length - 1] < totalPages.value;
   });
 
+// 监听分页数据变化，避免当前页超过总页数
+watch([filteredAndSorted, pageSize], () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = totalPages.value;
+  }
+});
+
 </script>
 <style scoped>
 /* 不可知进度条的左右平移动画 */
@@ -631,5 +678,103 @@ onMounted(()=>{
   background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0) 100%);
   transform: translateX(-120%);
   animation: shine-slide 2.2s ease-in-out infinite;
+}
+
+/* 扁平化、简约的下拉选择样式 */
+.filter-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #ffffff;
+  border: 1px solid rgba(16,24,40,0.06);
+  padding: 8px 36px 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #111827;
+  min-width: 140px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='%23777' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  box-shadow: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.06s ease;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #A78BFA;
+  box-shadow: 0 6px 18px rgba(167,139,250,0.12);
+}
+
+.filter-select--small {
+  padding: 6px 34px 6px 10px;
+  min-width: 96px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+/* 下拉选项 hover / focus（浏览器对原生 option 支持有限，尝试提供浅紫背景） */
+.filter-select option {
+  background-color: #ffffff;
+  color: #111827;
+}
+.filter-select option:hover,
+.filter-select option:focus {
+  background-color: rgba(215,199,255,0.12);
+  color: #111827;
+}
+
+/* 紫色浮动点加载器 */
+.loader-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.loader-dots .dot {
+  width: 12px;
+  height: 12px;
+  margin: 0 6px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #b7a8f1 0%, #c8a2fc 100%);
+  box-shadow: 0 6px 18px rgba(167,139,250,0.10);
+  transform-origin: center bottom;
+  animation: dotWave 0.9s cubic-bezier(.45,.05,.55,.95) infinite;
+}
+.loader-dots .dot:nth-child(1) { animation-delay: 0s; }
+.loader-dots .dot:nth-child(2) { animation-delay: 0.12s; }
+.loader-dots .dot:nth-child(3) { animation-delay: 0.24s; }
+@keyframes dotWave {
+  0% { transform: translateY(0) scaleY(1); opacity: 0.9; }
+  25% { transform: translateY(-8px) scaleY(1.06); opacity: 1; }
+  50% { transform: translateY(0) scaleY(1); opacity: 0.92; }
+  75% { transform: translateY(6px) scaleY(0.96); opacity: 0.95; }
+ 100% { transform: translateY(0) scaleY(1); opacity: 0.9; }
+}
+
+/* 将加载层上移到页面偏上位置 */
+.loader-overlay {
+  align-items: flex-start;
+  padding-top: 18.5rem; /* 可微调 */
+}
+
+/* 加载文字：紫色渐变 + 微光脉动，与动画风格保持一致 */
+.loader-text {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: #8b5cf6; /* fallback */
+  background: linear-gradient(90deg,#D6BCFA 0%, #dad2fb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 1px 0 rgba(167,139,250,0.06);
+  animation: loaderTextPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes loaderTextPulse {
+  0% { opacity: 0.92; transform: translateY(0); filter: drop-shadow(0 6px 14px rgba(167,139,250,0.06)); }
+  50% { opacity: 1; transform: translateY(-2px); filter: drop-shadow(0 10px 26px rgba(167,139,250,0.10)); }
+  100% { opacity: 0.92; transform: translateY(0); filter: drop-shadow(0 6px 14px rgba(167,139,250,0.06)); }
 }
 </style>
