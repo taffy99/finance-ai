@@ -22,7 +22,7 @@
             <i class="fas fa-plus mr-2"></i> 添加投资
           </button>
           <button class="btn btn-primary">
-            <i class="fas fa-sync-alt mr-2"></i> 同步数据
+            <i class="fas fa-sync-alt mr-2"></i> 同步历史数据
           </button>
         </div>
       </div>
@@ -66,9 +66,9 @@
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-semibold">投资收益趋势</h3>
             <div class="flex space-x-2">
-              <button class="btn btn-primary text-sm py-1 px-3">6月</button>
-              <button class="btn btn-outline text-sm py-1 px-3">1年</button>
-              <button class="btn btn-outline text-sm py-1 px-3">3年</button>
+              <button @click="setReturnsRange('6m')" :class="['btn', selectedRange==='6m'? 'btn-primary':'btn-outline','text-sm py-1 px-3']">6月</button>
+              <button @click="setReturnsRange('1y')" :class="['btn', selectedRange==='1y'? 'btn-primary':'btn-outline','text-sm py-1 px-3']">近1年</button>
+              <button @click="setReturnsRange('3y')" :class="['btn', selectedRange==='3y'? 'btn-primary':'btn-outline','text-sm py-1 px-3']">近3年</button>
             </div>
           </div>
           <div class="chart-container">
@@ -133,13 +133,14 @@
                       <i :class="rowIcontype(product.product_type)"></i>
                     </div>
                     <span>{{ product.product_name }}</span>
+                    <span v-if="product.return_rate != null && Number(product.return_rate) <= -0.03" class="ml-2 inline-block px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-700" title="收益率低于 -3%，请注意风险">预警</span>
                   </div>
                 </td>
                 <td class="py-3 px-4 text-sm">{{ product.product_type_name }}</td>
                 <td class="py-3 px-4 text-sm">{{ product.purchase_date }}</td>
                 <td class="py-3 px-4 text-sm text-right">¥{{ product.total_amount? product.total_amount.toLocaleString():'' }}</td>
-                <td class="py-3 px-4 text-sm text-right text-green-500">{{ (product.return_rate * 100).toFixed(2) }}%</td>
-                <td class="py-3 px-4 text-sm text-right text-green-500">¥{{ product.profit_amount?product.profit_amount.toLocaleString():'' }}</td>
+                <td :class="['py-3 px-4 text-sm text-right', (product.return_rate == null) ? 'text-gray-500' : (Number(product.return_rate) > 0 ? 'text-green-500' : (Number(product.return_rate) < 0 ? 'text-red-500' : 'text-gray-500'))]">{{ product.return_rate != null ? (product.return_rate * 100).toFixed(2) + '%' : '—' }}</td>
+                <td :class="['py-3 px-4 text-sm text-right', (product.profit_amount == null) ? 'text-gray-500' : (Number(product.profit_amount) > 0 ? 'text-green-500' : (Number(product.profit_amount) < 0 ? 'text-red-500' : 'text-gray-500'))]">¥{{ product.profit_amount ? Number(product.profit_amount).toLocaleString() : '—' }}</td>
                 <td class="py-3 px-4 text-sm text-right">
                   <button class="text-blue-500 hover:text-blue-700">
                     详情
@@ -165,24 +166,27 @@
           </div>
           <div class="flex space-x-1">
             <!-- 上一页 -->
-            <button 
-              @click="currentPage == Math.max(1, currentPage-1)"
-              class="w-8 h-8 flex items-center justify-center rounded border " :class="currentPage === 1?'text-gray-400 cursor-not-allowed':'hover:bg-gray-50'">
+            <button
+              @click="currentPage = Math.max(1, currentPage-1)"
+              :class="['btn', currentPage===1? 'btn-outline opacity-50 cursor-not-allowed':'btn-outline','text-sm py-1 px-3']"
+              :disabled="currentPage===1"
+            >
               <i class="fas fa-chevron-left"></i>
             </button>
             <!-- 页码列表 -->
             <button v-for="page in visiblePages" :key="page" @click="currentPage = page"
-                    :class="['w-8 h-8 flex items-center justify-center rounded border',currentPage===page?'bg-blue-500 text-white':'hover:bg-gray-50']">
+                :class="['btn', currentPage===page? 'btn-primary':'btn-outline','text-sm py-1 px-3']">
               {{ page }}
               </button>
               <!-- 省略号 -->
               <span v-if="showLeftEllipsis">...</span>
               <span v-if="showRightEllipsis">...</span>
             <!-- 下一页 -->
-            <button 
+            <button
               @click="currentPage = Math.min(totalPages, currentPage+1)"
-              :class="currentPage === totalPages?'text-gray-400 cursor-not-allowed':'hover:bg-gray-50'"
-              class="w-8 h-8 flex items-center justify-center rounded border">
+              :class="['btn', currentPage===totalPages? 'btn-outline opacity-50 cursor-not-allowed':'btn-outline','text-sm py-1 px-3']"
+              :disabled="currentPage===totalPages"
+            >
               <i class="fas fa-chevron-right"></i>
             </button>
           </div>
@@ -259,10 +263,13 @@ import InvestDetailModal from '../components/InvestDetailModal.vue'
 import { useRouter }  from 'vue-router'
 // 注册 Chart.js 组件
 Chart.register(...registerables)
+// 选中的时间范围：'6m'|'1y'|'3y'
+const selectedRange = ref('6m')
 const investmentPortfolioChart = ref(null) //投资组合图表 (canvas ref DOM)
 const portfolioChartInstance = ref(null) // 投资组合图表 Chart.js 实例
 const investmentReturnsChart = ref(null) // 投资收益趋势图表 (canvas ref dom)
 const returnsChartInstance = ref(null) // 投资收益趋势图表 Chart.js 实例
+
 
 // 投资产品列表
 // const investmentList = ref(investList)
@@ -318,7 +325,13 @@ const { historicalReturns,loading:returnsLoading,fetchHistoricalReturns } = useH
 // 初始化投资组合图表
 const initializePortfolioChart = () => {
   if (portfolioChartInstance.value) {
-    portfolioChartInstance.value.destroy()
+    try {
+      const hasCanvas = !!(portfolioChartInstance.value.canvas || (portfolioChartInstance.value.ctx && portfolioChartInstance.value.ctx.canvas));
+      if (hasCanvas) portfolioChartInstance.value.destroy();
+    } catch (e) {
+      console.warn('portfolioChart destroy failed or canvas missing:', e);
+    }
+    portfolioChartInstance.value = null;
   }
   // 按产品类型聚合：仅统计 purchase_date 属于最新月份的产品，生成 labels（类型名）和 data（每种类型的 total_amount 总和）
   const productTypeAggregation = computed(() => {
@@ -370,7 +383,7 @@ const productTypeData = computed(() => productTypeLabels.value.map(k => productT
   // pastel palette for pie slices
   const colorPalette = ['#C4B5FD', '#A7F3D0', '#FBCFE8', '#FEF3C7', '#FECACA', '#BFDBFE', '#FDE68A', '#D1FAE5', '#FEE2E2', '#E5E7EB'];
 
-  // 创建图表
+  // 创建投资分布图表
   const ctx = investmentPortfolioChart.value && investmentPortfolioChart.value.getContext && investmentPortfolioChart.value.getContext('2d');
   if (!ctx) return;
   const bgColors = colorPalette.slice(0, productTypeLabels.value.length);
@@ -400,14 +413,43 @@ const productTypeData = computed(() => productTypeLabels.value.map(k => productT
   }); 
 };
 
-const initializeReturnsChart = () => {
+const initializeReturnsChart = (range) => {
   if (returnsChartInstance.value) {
-    returnsChartInstance.value.destroy()
+     try {
+      const hasCanvas = !!(returnsChartInstance.value.canvas || (returnsChartInstance.value.ctx && returnsChartInstance.value.ctx.canvas));
+      if (hasCanvas) returnsChartInstance.value.destroy();
+    } catch (e) {
+      console.warn('returnsChart destroy failed or canvas missing:', e);
+    }
+    returnsChartInstance.value = null;
   }
   const sortedReturns = computed(() => [...historicalReturns.value].sort((a, b) => new Date(a.invest_month) - new Date(b.invest_month)))
-  const returnLabels = sortedReturns.value.map(item => item.invest_month)
-  const returnTotalAmount = sortedReturns.value.map(item => item.total_amount)
-  const retuenProfitAmount = sortedReturns.value.map(item => item.total_returns)
+  // 过滤出符合范围的数据
+  const filteredReturns = sortedReturns.value.filter(item => {
+    // 根据 range 的值过滤数据
+    switch (range) {
+      case '6m':
+        // 仅保留最近6个月的数据
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        return new Date(item.invest_month) >= sixMonthsAgo;
+      case '1y':
+        // 仅保留最近1年的数据
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        return new Date(item.invest_month) >= oneYearAgo;
+      case '3y':
+        // 仅保留最近3年的数据
+        const threeYearsAgo = new Date();
+        threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+        return new Date(item.invest_month) >= threeYearsAgo;
+      default:
+        return true; // 这里需要根据实际逻辑进行过滤
+  }  });
+  console.log('filteredReturns ', filteredReturns)
+  const returnLabels = filteredReturns.map(item => item.invest_month)
+  const returnTotalAmount = filteredReturns.map(item => item.total_amount)
+  const retuenProfitAmount = filteredReturns.map(item => item.total_returns)
   // 投资收益趋势图表（保持原有静态数据）
   const investmentReturnsCtx = investmentReturnsChart.value && investmentReturnsChart.value.getContext && investmentReturnsChart.value.getContext('2d')
   if (!investmentReturnsCtx)  return;
@@ -449,6 +491,15 @@ const initializeReturnsChart = () => {
       }
     });
 }
+
+// 切换范围并刷新图表
+const setReturnsRange = (range) => {
+  if (!['6m', '1y', '3y'].includes(range)) return;
+  selectedRange.value = range;
+  // 重新初始化图表
+  initializeReturnsChart(range);
+}
+
 
 
 // 规范化并展示概览数据的便捷计算属性（防止字段缺失导致模版报错）
@@ -523,7 +574,7 @@ const annualizedReturnClass = computed(() => signClass(annualizedReturnRaw.value
 // const overviewLoading = ref(true)
 onMounted(()=>{
   fetchHistoricalReturns().then(()=>{
-    initializeReturnsChart();
+    initializeReturnsChart(selectedRange.value);
   })
   fetchProducts().then(()=>{
     initializePortfolioChart();
