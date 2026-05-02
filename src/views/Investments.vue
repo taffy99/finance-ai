@@ -95,6 +95,15 @@
                 <option value="asc">最旧到最新</option>
               </select>
             </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-gray-600">预警筛选：</label>
+              <div class="flex items-center gap-2">
+                <button v-for="opt in badgeOptions" :key="opt" @click="toggleBadge(opt)"
+                  :class="['btn', selectedBadgeFilters.includes(opt)? 'btn-primary':'btn-outline','text-sm py-1 px-3']">
+                  <i v-if="selectedBadgeFilters.includes(opt)" class="fa-solid fa-check mr-1 text-white"></i>{{ opt }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="overflow-x-auto">
@@ -126,14 +135,17 @@
               
             
               <!-- 使用 v-for 循环渲染数据 -->
-              <tr class="border-b hover:bg-gray-50" v-for="product in filteredProducts" :key="product.id">
+              <tr :class="['border-b hover:bg-gray-50', getRowWarningClass(product.return_rate)]" v-for="product in filteredProducts" :key="product.id">
                 <td class="py-3 px-4">
                   <div class="flex items-center">
                     <div class="w-8 h-8 rounded-full flex items-center justify-center mr-3" :class="rowIconBgtype(product.product_type)">
                       <i :class="rowIcontype(product.product_type)"></i>
                     </div>
                     <span>{{ product.product_name }}</span>
-                    <span v-if="product.return_rate != null && Number(product.return_rate) <= -0.03" class="ml-2 inline-block px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-700" title="收益率低于 -3%，请注意风险">预警</span>
+                        <span v-if="getBadgeInfo(product.return_rate).show"
+                          :class="getBadgeInfo(product.return_rate).cls"
+                          :title="getBadgeInfo(product.return_rate).title"
+                        >{{ getBadgeInfo(product.return_rate).text }}</span>
                   </div>
                 </td>
                 <td class="py-3 px-4 text-sm">{{ product.product_type_name }}</td>
@@ -492,6 +504,29 @@ const initializeReturnsChart = (range) => {
     });
 }
 
+// 根据收益率返回是否显示预警、样式和提示文案
+// 规则：<= -5% -> 高风险(红)，< 0 且 > -5% -> 提醒(黄)，>= 10% -> 高收益(绿)
+const getBadgeInfo = (rate) => {
+  if (rate == null) return { show: false }
+  const r = Number(rate)
+  if (isNaN(r)) return { show: false }
+  if (r <= -0.05) return { show: true, cls: 'ml-2 inline-block px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-700', title: '收益率低于 -5%，风险较高', text: '高风险' }
+  // 所有负值但大于 -5% 都视为提醒（黄色）
+  if (r < 0) return { show: true, cls: 'ml-2 inline-block px-2 py-0.5 text-xs font-medium rounded bg-yellow-100 text-yellow-800', title: '收益率为负，请注意风险', text: '提醒' }
+  if (r >= 0.10) return { show: true, cls: 'ml-2 inline-block px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700', title: '收益率较高', text: '高收益' }
+  return { show: false }
+}
+
+// 根据收益率返回整行的浅色背景类（与标签颜色对应）
+const getRowWarningClass = (rate) => {
+  const info = getBadgeInfo(rate)
+  if (!info.show) return ''
+  if (info.text === '高风险') return 'bg-red-50'
+  if (info.text === '提醒') return 'bg-yellow-50'
+  if (info.text === '高收益') return 'bg-green-50'
+  return ''
+}
+
 // 切换范围并刷新图表
 const setReturnsRange = (range) => {
   if (!['6m', '1y', '3y'].includes(range)) return;
@@ -585,6 +620,16 @@ onMounted(()=>{
 // 过滤与排序变量
 const selectedType = ref('全部')
 const dateSortOrder = ref('desc') // 默认按日期降序（新到旧）
+// 预警筛选（多选）
+const selectedBadgeFilters = ref([])
+const badgeOptions = ['高风险', '提醒', '高收益']
+
+const toggleBadge = (opt) => {
+  const idx = selectedBadgeFilters.value.indexOf(opt)
+  if (idx > -1) selectedBadgeFilters.value.splice(idx, 1)
+  else selectedBadgeFilters.value.push(opt)
+  currentPage.value = 1
+}
 
 const productTypes = computed(() => {
   const types = new Set((products.value || []).map(p => p.product_type_name || p.product_type || '其他'));
@@ -604,6 +649,14 @@ const filteredAndSorted = computed(() => {
     if (isNaN(dateA) || isNaN(dateB)) return 0;
     return dateSortOrder.value === 'asc' ? dateA - dateB : dateB - dateA;
   });
+
+  // 如果选择了预警筛选，则按 badge 文案过滤（需要 badge 显示且其 text 在所选中项中）
+  if (selectedBadgeFilters.value && selectedBadgeFilters.value.length > 0) {
+    list = list.filter(p => {
+      const info = getBadgeInfo(p.return_rate)
+      return info.show && selectedBadgeFilters.value.includes(info.text)
+    })
+  }
 
   return list;
 })
