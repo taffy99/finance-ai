@@ -17,13 +17,12 @@
           <h2 class="text-xl font-bold">投资分析</h2>
           <p class="text-gray-500">管理和分析您的投资组合</p>
         </div>
-        <div class="mt-4 md:mt-0 flex space-x-3">
-          <button class="btn rounded-full bg-white border border-purple-500 text-purple-500 hover:bg-purple-100" @click="showAddModal">
-            <i class="fas fa-plus mr-2"></i> 添加投资
-          </button>
-          <button class="btn btn-primary">
-            <i class="fas fa-sync-alt mr-2"></i> 同步历史数据
-          </button>
+        <div class="mt-4 md:mt-0 flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <select v-model="selectedHistoryMonth" class="filter-select">
+              <option v-for="m in historyMonths" :key="m" :value="m">{{ m }}</option>
+            </select>
+          </div>
         </div>
       </div>
     
@@ -79,29 +78,37 @@
     
       <!-- 投资产品列表 -->
       <div class="card overflow-hidden mb-6">
-        <div class="p-4 border-b md:flex md:items-center md:justify-between gap-4">
-          <h3 class="text-lg font-semibold">投资产品</h3>
-          <div class="flex flex-wrap items-center gap-3 mt-3 md:mt-0">
-            <div class="flex items-center gap-2">
-              <label class="text-sm text-gray-600">产品类型：</label>
-              <select v-model="selectedType" @change="currentPage = 1" class="filter-select">
-                <option v-for="type in productTypes" :key="type" :value="type">{{ type }}</option>
-              </select>
+        <div class="p-4 border-b">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-3 flex-wrap">
+              <h3 class="text-lg font-semibold">投资产品</h3>
+              <button class="btn text-sm py-0.5 px-2 rounded-full bg-white border border-purple-500 text-purple-500 hover:bg-purple-100" @click="showAddModal">
+                <i class="fas fa-plus mr-1"></i> 添加投资
+              </button>
             </div>
-            <div class="flex items-center gap-2">
-              <label class="text-sm text-gray-600">日期排序：</label>
-              <select v-model="dateSortOrder" @change="currentPage = 1" class="filter-select">
-                <option value="desc">最新到最旧</option>
-                <option value="asc">最旧到最新</option>
-              </select>
-            </div>
-            <div class="flex items-center gap-2">
-              <label class="text-sm text-gray-600">预警筛选：</label>
+            <!-- 筛选和排序选项 -->
+            <div class="flex flex-wrap items-center gap-10 w-full pt-2">
               <div class="flex items-center gap-2">
-                <button v-for="opt in badgeOptions" :key="opt" @click="toggleBadge(opt)"
-                  :class="['btn', selectedBadgeFilters.includes(opt)? 'btn-primary':'btn-outline','text-sm py-1 px-3']">
-                  <i v-if="selectedBadgeFilters.includes(opt)" class="fa-solid fa-check mr-1 text-white"></i>{{ opt }}
-                </button>
+                <label class="filter-label text-sm text-gray-600 font-semibold">产品类型：</label>
+                <select v-model="selectedType" @change="currentPage = 1" class="filter-select">
+                  <option v-for="type in productTypes" :key="type" :value="type">{{ type }}</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="filter-label text-sm text-gray-600 font-semibold">日期排序：</label>
+                <select v-model="dateSortOrder" @change="currentPage = 1" class="filter-select">
+                  <option value="desc">最新到最旧</option>
+                  <option value="asc">最旧到最新</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="filter-label text-sm text-gray-600 font-semibold">预警筛选：</label>
+                <div class="flex items-center gap-2">
+                  <button v-for="opt in badgeOptions" :key="opt" @click="toggleBadge(opt)"
+                    :class="['btn', selectedBadgeFilters.includes(opt)? 'btn-primary':'btn-outline','text-sm py-1 px-3']">
+                    <i v-if="selectedBadgeFilters.includes(opt)" class="fa-solid fa-check mr-1 text-white"></i>{{ opt }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -109,14 +116,14 @@
         <div class="overflow-x-auto">
           <table class="min-w-full">
             <thead>
-              <tr class="bg-gray-50">
-                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">产品名称</th>
-                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">类型</th>
-                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">日期</th>
-                <th class="text-right py-3 px-4 text-sm font-medium text-gray-500">累计金额</th>
-                <th class="text-right py-3 px-4 text-sm font-medium text-gray-500">收益率</th>
-                <th class="text-right py-3 px-4 text-sm font-medium text-gray-500">收益金额</th>
-                <th class="text-right py-3 px-4 text-sm font-medium text-gray-500">操作</th>
+              <tr class="bg-primary text-white shadow-lg shadow-primary/20 rounded-xl">
+                <th class="text-left py-3 px-4 text-sm font-medium">产品名称</th>
+                <th class="text-left py-3 px-4 text-sm font-medium">类型</th>
+                <th class="text-left py-3 px-4 text-sm font-medium">日期</th>
+                <th class="text-right py-3 px-4 text-sm font-medium">累计金额</th>
+                <th class="text-right py-3 px-4 text-sm font-medium">收益率</th>
+                <th class="text-right py-3 px-4 text-sm font-medium">收益金额</th>
+                <th class="text-right py-3 px-4 text-sm font-medium">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -165,7 +172,7 @@
         <div class="p-4 border-t flex justify-between items-center">
           <div class="text-sm text-gray-500">显示{{ currentStartIndex }} — {{ currentEndIndex }} 条，共 {{ totalItems }} 条</div>
           <div class="flex items-center gap-2">
-          <span class="text-gray-600">每页显示：</span>
+          <span class="filter-label text-gray-600">每页显示：</span>
             <select 
               v-model="pageSize" 
               @change="handlePageSizeChange"
@@ -537,8 +544,27 @@ const setReturnsRange = (range) => {
 
 
 
-// 规范化并展示概览数据的便捷计算属性（防止字段缺失导致模版报错）
-const overview = computed(() => (historicalReturns.value && historicalReturns.value.length ? historicalReturns.value[0] : {}));
+// 历史月份选择（由 historicalReturns 提供）以及当前用于展示概览的月份
+const selectedHistoryMonth = ref('');
+const currentOverviewMonth = ref('');
+
+const historyMonths = computed(() => {
+  const arr = (historicalReturns.value || []).map(r => r && r.invest_month).filter(Boolean);
+  // 去重并按时间倒序
+  const unique = Array.from(new Set(arr));
+  unique.sort((a, b) => new Date(b) - new Date(a));
+  return unique;
+});
+
+// overview 根据 currentOverviewMonth 选择对应的历史记录，若未选择则取最新
+const overview = computed(() => {
+  const list = historicalReturns.value || [];
+  if (currentOverviewMonth.value) {
+    const found = list.find(r => r && r.invest_month === currentOverviewMonth.value);
+    if (found) return found;
+  }
+  return list.length ? list[0] : {};
+});
 const investmentTotalDisplay = computed(() => {
   const v = overview.value['total_amount'];
   return v != null ? `¥${v.toLocaleString()}` : '—';
@@ -605,11 +631,22 @@ const cumulativeProfitClass = computed(() => signClass(cumulativeProfitRaw.value
 const cumulativeReturnClass = computed(() => signClass(cumulativeReturnRaw.value));
 const monthProfitClass = computed(() => signClass(monthProfitRaw.value));
 const annualizedReturnClass = computed(() => signClass(annualizedReturnRaw.value));
+// 监听选中历史月份并自动切换当前概览
+watch(selectedHistoryMonth, (newVal) => {
+  if (newVal) {
+    currentOverviewMonth.value = newVal;
+  }
+});
 // const productsLoading = ref(true)
 // const overviewLoading = ref(true)
 onMounted(()=>{
   fetchHistoricalReturns().then(()=>{
     initializeReturnsChart(selectedRange.value);
+    // 初始化下拉与当前概览为最新月份
+    if (historyMonths.value && historyMonths.value.length) {
+      selectedHistoryMonth.value = historyMonths.value[0];
+      currentOverviewMonth.value = historyMonths.value[0];
+    }
   })
   fetchProducts().then(()=>{
     initializePortfolioChart();
@@ -784,36 +821,37 @@ watch([filteredAndSorted, pageSize], () => {
   animation: shine-slide 2.2s ease-in-out infinite;
 }
 
-/* 扁平化、简约的下拉选择样式 */
+/* 扁平化、简约的下拉选择样式，与模态框内选择按钮一致 */
 .filter-select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
+  width: 100%;
   background-color: #ffffff;
-  border: 1px solid rgba(16,24,40,0.06);
-  padding: 8px 36px 8px 12px;
-  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  padding: 10px 38px 10px 14px;
+  border-radius: 0.75rem;
   font-size: 14px;
   color: #111827;
   min-width: 140px;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='%23777' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
   background-repeat: no-repeat;
-  background-position: right 10px center;
+  background-position: right 12px center;
   background-size: 16px;
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.06);
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.06s ease;
 }
 
 .filter-select:focus {
   outline: none;
   border-color: #A78BFA;
-  box-shadow: 0 6px 18px rgba(167,139,250,0.12);
+  box-shadow: 0 0 0 4px rgba(167,139,250,0.12);
 }
 
 .filter-select--small {
-  padding: 6px 34px 6px 10px;
+  padding: 8px 34px 8px 12px;
   min-width: 96px;
-  border-radius: 8px;
+  border-radius: 0.75rem;
   font-size: 13px;
 }
 
@@ -880,5 +918,10 @@ watch([filteredAndSorted, pageSize], () => {
   0% { opacity: 0.92; transform: translateY(0); filter: drop-shadow(0 6px 14px rgba(167,139,250,0.06)); }
   50% { opacity: 1; transform: translateY(-2px); filter: drop-shadow(0 10px 26px rgba(167,139,250,0.10)); }
   100% { opacity: 0.92; transform: translateY(0); filter: drop-shadow(0 6px 14px rgba(167,139,250,0.06)); }
+}
+
+/* 防止筛选控件中的label文字折行 */
+.filter-label {
+  white-space: nowrap;
 }
 </style>

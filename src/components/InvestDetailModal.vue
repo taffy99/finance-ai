@@ -1,7 +1,7 @@
 <template>
   <transition name="slide-fade">
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 z-50" v-if="showAddInvestModal">
-      <div class="bg-white rounded-lg w-full max-w-md mx-4 mt-10 max-h-[calc(100vh-20px)] overflow-y-auto">
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center px-4 py-6 z-50" v-if="showAddInvestModal">
+      <div class="bg-white rounded-lg w-full max-w-md max-h-[calc(100vh-40px)] overflow-y-auto shadow-xl">
         <div class="p-6">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl font-bold">
