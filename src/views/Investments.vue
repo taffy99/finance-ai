@@ -19,6 +19,7 @@
         </div>
         <div class="mt-4 md:mt-0 flex items-center gap-3">
           <div class="flex items-center gap-2">
+            <span class="filter-label text-gray-600">更新日期：</span>
             <select v-model="selectedHistoryMonth" class="filter-select">
               <option v-for="m in historyMonths" :key="m" :value="m">{{ m }}</option>
             </select>
@@ -35,7 +36,7 @@
         </div>
         
         <div class="card p-6">
-          <p class="text-gray-500 text-sm">当年累计收益</p>
+          <p class="text-gray-500 text-sm">累计收益</p>
           <h3 :class="['text-2xl font-bold mt-1', cumulativeProfitClass]">{{ cumulativeProfitDisplay }}</h3>
           <p class="text-sm mt-2">收益率 <span :class="cumulativeReturnClass">{{ cumulativeReturnDisplay }}</span></p>
         </div>
@@ -121,8 +122,8 @@
                 <th class="text-left py-3 px-4 text-sm font-medium">类型</th>
                 <th class="text-left py-3 px-4 text-sm font-medium">日期</th>
                 <th class="text-right py-3 px-4 text-sm font-medium">累计金额</th>
-                <th class="text-right py-3 px-4 text-sm font-medium">收益率</th>
-                <th class="text-right py-3 px-4 text-sm font-medium">收益金额</th>
+                <th class="text-right py-3 px-4 text-sm font-medium">年收益率</th>
+                <th class="text-right py-3 px-4 text-sm font-medium">年收益金额</th>
                 <th class="text-right py-3 px-4 text-sm font-medium">操作</th>
               </tr>
             </thead>
@@ -178,9 +179,9 @@
               @change="handlePageSizeChange"
               class="filter-select filter-select--small"
             >
-              <option value="5">5 条</option>
-              <option value="10">10 条</option>
-              <option value="20">20 条</option>
+              <option :value="5">5 条</option>
+              <option :value="10">10 条</option>
+              <option :value="20">20 条</option>
             </select>
           </div>
           <div class="flex space-x-1">
@@ -299,7 +300,7 @@ const rowIcontype = computed(()=>{
     wealthManagementProduct: 'fas fa-building text-blue-500',
     indexFund: 'fas fa-chart-line text-green-500',
     MMF: 'fas fa-chart-pie text-purple-500',
-    // stock: 'fas fa-coins text-red-500',
+    BND: 'fas fa-coins text-red-500',
     QDII: 'fas fa-globe text-yellow-500'
    }
    return (productType) =>  typeStyles[productType] || ''
@@ -309,7 +310,7 @@ const rowIconBgtype = computed(()=>{
     wealthManagementProduct: 'bg-blue-100',
     indexFund: 'bg-green-100',
     MMF: 'bg-purple-100',
-    // stock: 'bg-red-100',
+    BND: 'bg-red-100',
     QDII: 'bg-yellow-100'
    }
    return (productType) =>  typeStyles[productType] || ''
@@ -426,7 +427,18 @@ const productTypeData = computed(() => productTypeLabels.value.map(k => productT
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'right' }
+        legend: { position: 'right' },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const label = context.label || '';
+              const value = Number(context.parsed || 0);
+              const total = context.dataset.data.reduce((sum, item) => sum + Number(item || 0), 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(2) : '0.00';
+              return `${label} - ${percentage}%`;
+            }
+          }
+        }
       }
     }
   }); 
@@ -705,24 +717,27 @@ const filteredAndSorted = computed(() => {
   const totalItems = computed(()=>filteredAndSorted.value.length)
   // 总页面数
   const totalPages = computed(()=>{
-    return Math.max(1, Math.ceil(totalItems.value/pageSize.value))
+    const size = Number(pageSize.value) || 1;
+    return Math.max(1, Math.ceil(totalItems.value / size));
   })
   // 当前页显示的产品
   const filteredProducts = computed(() => {
-    const startIndex = (currentPage.value - 1) * pageSize.value;
-    const endIndex = startIndex + pageSize.value;
+    const size = Number(pageSize.value) || 1;
+    const startIndex = (currentPage.value - 1) * size;
+    const endIndex = startIndex + size;
     return filteredAndSorted.value.slice(startIndex, endIndex);
   });
  // 当前页面起始编号
   const currentStartIndex = computed(()=>{
-    return (currentPage.value - 1) * pageSize.value + 1
+    return (currentPage.value - 1) * Number(pageSize.value) + 1
   })
   //当前页面终止编号
   const currentEndIndex = computed(()=>{
-    return Math.min(totalItems.value, (currentPage.value - 1) * pageSize.value + pageSize.value)
+    return Math.min(totalItems.value, (currentPage.value - 1) * Number(pageSize.value) + Number(pageSize.value))
   })
   // 处理每页显示条数变化
   const handlePageSizeChange = () => {
+    pageSize.value = Number(pageSize.value) || 1;
     currentPage.value = 1; // 重置到第一页
   };
   // 计算可见页码（最多显示5个页码，其余用省略号）
