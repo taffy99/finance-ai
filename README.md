@@ -47,7 +47,10 @@ npm run aktools
 AKTOOLS_HOST=0.0.0.0 AKTOOLS_PORT=8080 AKTOOLS_WORKERS=2 npm run aktools
 ```
 
-当前封装提供基金列表、基金分级信息和 ETF 历史数据接口：
+当前封装提供基金列表、开放式基金净值走势、基金分级历史数据和 ETF
+历史数据接口。普通基金（例如 `000008`）应使用
+`fund_open_fund_info_em`；`fund_graded_fund_info_em` 仅适用于分级基金代码
+（官方示例为 `150232`），不能用普通基金代码调用。
 
 ```js
 import { AkToolsAPI } from './src/lib/aktools.js';
@@ -58,6 +61,9 @@ const history = await AkToolsAPI.getFundHistory('510300', {
   endDate: '2024-12-31'
 });
 ```
+
+官方接口说明：
+[fund_graded_fund_info_em](https://akshare.akfamily.xyz/data/fund/fund_public.html#fund-graded-fund-info-em)
 
 - 在浏览器打开：
 

@@ -55,6 +55,10 @@ export const AkToolsAPI = {
     return this.call('fund_graded_fund_info_em', { symbol });
   },
 
+  getOpenFundInfo(symbol, indicator = '单位净值走势') {
+    return this.call('fund_open_fund_info_em', { symbol, indicator });
+  },
+
   getFundHistory(symbol, {
     period = 'monthly',
     startDate,

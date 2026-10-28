@@ -43,7 +43,7 @@ export const MarketAPI = {
   },
 
   getMarketHistory(marketId) {
-    return AkToolsAPI.getFundGradedInfo(marketId);
+    return AkToolsAPI.getOpenFundInfo(marketId);
   },
 
   getMarketTrends(marketId, startDate, endDate) {

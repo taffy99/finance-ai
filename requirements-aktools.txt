@@ -1,1 +1,4 @@
 aktools==0.0.95
+akshare==1.20.2
+curl-cffi==0.17.0
+cffi==2.0.0
