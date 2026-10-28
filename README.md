@@ -16,6 +16,49 @@ Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://
 npm run dev
 ```
 
+### AkTools 接口
+
+项目通过 [`src/lib/aktools.js`](./src/lib/aktools.js) 调用 AkTools
+公开 API。默认地址为 `http://127.0.0.1:8080/api/public`，也可以配置
+`VITE_AKTOOLS_BASE_URL`：
+
+```env
+VITE_AKTOOLS_BASE_URL=/aktools-api/api/public
+```
+
+#### 启动本地 AkTools 服务
+
+项目提供了本地启动脚本，会自动创建 `.aktools-venv` 虚拟环境并安装当前
+最新版本 `aktools==0.0.95`（见
+[`requirements-aktools.txt`](./requirements-aktools.txt)）：
+
+```bash
+npm run aktools
+```
+
+服务启动后可访问：
+
+- API 文档：`http://127.0.0.1:8080/docs`
+- 公共 API：`http://127.0.0.1:8080/api/public`
+
+可以通过环境变量修改监听地址和端口：
+
+```bash
+AKTOOLS_HOST=0.0.0.0 AKTOOLS_PORT=8080 AKTOOLS_WORKERS=2 npm run aktools
+```
+
+当前封装提供基金列表、基金分级信息和 ETF 历史数据接口：
+
+```js
+import { AkToolsAPI } from './src/lib/aktools.js';
+
+const history = await AkToolsAPI.getFundHistory('510300', {
+  period: 'monthly',
+  startDate: '2024-01-01',
+  endDate: '2024-12-31'
+});
+```
+
 - 在浏览器打开：
 
 	http://localhost:5173/#/ai-eft-analyzer

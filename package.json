@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "aktools": "bash scripts/start-aktools.sh",
     "build": "vite build",
     "preview": "vite preview"
   },
