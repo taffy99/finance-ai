@@ -12,6 +12,8 @@ import AiEftAnalyzer from "../views/AiEftAnalyzer.vue"
 import Settings from "../views/Settings.vue"
 import FundStrategy from "../components/FundStrategy.vue"
 import MultiStrategy from "../components/MultiStrategy.vue"
+import CorrelationAnalysis from "../components/CorrelationAnalysis.vue"
+import FundAnalysis from "../views/FundAnalysis.vue"
 const routes = [
   {
     path: '/',
@@ -63,9 +65,26 @@ const routes = [
         component: Settings
       },
       {
-        path: 'multiStrategy', // 多维度策略
-        name: MultiStrategy,
-        component: MultiStrategy
+        path: 'multiStrategy',
+        name: 'multiStrategy',
+        component: FundAnalysis,
+        children: [
+          {
+            path: '',
+            component: MultiStrategy
+          }
+        ]
+      },
+      {
+        path: 'fundCorrelation',
+        name: 'fundCorrelation',
+        component: FundAnalysis,
+        children: [
+          {
+            path: '',
+            component: CorrelationAnalysis
+          }
+        ]
       },
       {
         path: 'fundStrategy', // 基金定投策略

@@ -123,11 +123,11 @@ watch (()=> route.path, (newPath)=>{
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
-const isActive = (route) => {
-  if(route == 'investments' && (currentRoute.value=='/multiStrategy' || currentRoute.value=='/fundStrategy')) {
-      return true
-  }
-  return currentRoute.value === `/${route}`
+const isActive = (routeName) => {
+  const investmentRoutes = ['/investments', '/multiStrategy', '/fundStrategy', '/fundCorrelation']
+  return routeName === 'investments'
+    ? investmentRoutes.includes(currentRoute.value)
+    : currentRoute.value === `/${routeName}`
 }
 </script>
 

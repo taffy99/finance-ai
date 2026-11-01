@@ -1,0 +1,50 @@
+2026-10-28 10:50:55,053 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2026-10-28 10:51:05,007 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 10:52:13,758 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2026-10-28 10:53:07,052 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2026-10-28 10:53:11,156 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 10:56:59,669 - AKToolsLog - INFO - 获取到 stock_zh_a_hist 的数据
+2026-10-28 10:58:46,895 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2026-10-28 11:02:21,112 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2026-10-28 11:03:36,328 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 11:03:52,253 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2026-10-28 11:03:52,253 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2026-10-28 11:03:56,007 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 11:04:07,015 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 11:07:55,846 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2026-10-28 11:07:55,846 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2026-10-28 11:09:41,928 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 11:10:10,136 - AKToolsLog - INFO - 获取 akshare 最新版本失败：HTTPSConnectionPool(host='pypi.org', port=443): Read timed out. (read timeout=5)
+2026-10-28 11:10:20,306 - AKToolsLog - INFO - 获取 aktools 最新版本失败：HTTPSConnectionPool(host='pypi.org', port=443): Read timed out.
+2026-10-28 11:17:24,929 - AKToolsLog - INFO - 获取到 tool_trade_date_hist_sina 的数据
+2026-10-28 11:20:15,753 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 11:20:44,235 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 11:38:26,059 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 12:00:46,294 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 12:01:14,432 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 12:14:18,737 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 12:36:39,270 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 19:22:58,301 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 19:23:55,270 - AKToolsLog - INFO - 调用接口 fund_graded_fund_info_em 出错：Length mismatch: Expected axis has 14 elements, new values have 13 elements
+2026-10-28 19:29:40,728 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 19:29:43,374 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 19:56:09,384 - AKToolsLog - INFO - 获取到 fund_open_fund_info_em 的数据
+2026-10-28 19:56:20,529 - AKToolsLog - INFO - 获取到 fund_graded_fund_info_em 的数据
+2026-10-28 19:56:50,311 - AKToolsLog - INFO - 获取到 fund_graded_fund_info_em 的数据
+2026-10-28 19:57:54,127 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-10-28 19:57:58,725 - AKToolsLog - INFO - 获取到 fund_open_fund_info_em 的数据
+2026-10-28 20:14:15,194 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-11-01 16:05:24,876 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-11-01 16:05:34,105 - AKToolsLog - INFO - 获取到 fund_open_fund_info_em 的数据
+2026-11-01 16:07:10,259 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-11-01 16:07:51,906 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-11-01 16:07:53,424 - AKToolsLog - INFO - 获取到 fund_open_fund_info_em 的数据
+2026-11-01 16:47:29,345 - AKToolsLog - INFO - 调用接口 fund_open_fund_info_em 出错：<anonymous>:2: SyntaxError: Unexpected token '<'
+<!doctype html>
+^
+
+SyntaxError: Unexpected token '<'
+
+2026-11-01 16:58:56,787 - AKToolsLog - INFO - 获取到 fund_name_em 的数据
+2026-11-01 17:00:16,011 - AKToolsLog - INFO - 获取到 fund_open_fund_info_em 的数据
+2026-11-01 17:00:33,040 - AKToolsLog - INFO - 获取到 fund_name_em 的数据

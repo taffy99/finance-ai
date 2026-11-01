@@ -1,34 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 font-inter text-dark">
-    <!-- 顶部导航（与“分析市场”按钮一致的主色卡片风格） -->
-    <header class="sticky top-0 z-30">
-      <div class="bg-primary text-white rounded-xl shadow-lg shadow-primary/20 container mx-auto px-4 py-4 md:py-5">
-        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/10">
-              <i class="fa fa-line-chart text-white text-2xl"></i>
-            </div>
-            <div>
-              <h1 class="text-[clamp(1.25rem,2.2vw,1.75rem)] font-bold text-white">智能定投策略分析工具</h1>
-              <p class="text-white/80 mt-1 text-sm">多市场分析 · 智能策略 · 收益优化</p>
-            </div>
-          </div>
-
-          <div class="flex items-center space-x-3">
-            <div v-if="lastUpdated" class="text-sm text-white/90 px-3 py-2 rounded-full flex items-center gap-2 bg-white/06 border border-white/06">
-              <i class="fa fa-clock-o"></i>
-              <span>更新: {{ lastUpdated }}</span>
-            </div>
-            <button class="hidden md:inline-flex bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-sm">
-              导出报告
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- 主内容区 -->
-    <main class="container mx-auto px-4 py-8">
+  <div>
       <!-- 筛选条件区 -->
       <section class="mb-10 bg-white rounded-xl shadow-sm p-6 transform hover:shadow-lg transition-all duration-300">
         <div class="flex items-center mb-8">
@@ -36,17 +7,17 @@
             <i class="fa fa-filter text-primary text-xl"></i>
           </div>
           <div>
-            <h2 class="text-xl font-semibold">市场与时间筛选</h2>
-            <p class="text-neutral text-sm mt-1">选择目标市场和分析时间范围</p>
+            <h2 class="text-xl font-semibold">基金与时间筛选</h2>
+            <p class="text-neutral text-sm mt-1">选择目标基金和分析时间范围</p>
           </div>
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- 市场选择 -->
+          <!-- 基金选择 -->
           <div class="group">
             <label class="block text-neutral mb-2 font-medium flex items-center">
               <i class="fa fa-chart-line mr-2 text-primary/70"></i>
-              选择市场
+              选择基金
             </label>
             <div class="relative" ref="dropdownContainer">
               <!-- 搜索输入框 -->
@@ -58,7 +29,7 @@
                 @click="toggleDropdown"
               >
                 <span v-if="selectedMarketLabel">{{ selectedMarketLabel }}</span>
-                <span v-else class="text-gray-400">请选择市场</span>
+                <span v-else class="text-gray-400">请选择基金</span>
                 <i class="fa" :class="isDropdownOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
               </div>
               
@@ -92,7 +63,7 @@
                     <span class="text-gray-500 text-sm">{{ option.value }}</span>
                   </li>
                   <li v-if="filteredMarketOptions.length === 0" class="px-4 py-2 text-gray-500">
-                    未找到匹配的市场
+                    未找到匹配的基金
                   </li>
                 </ul>
               </div>
@@ -144,7 +115,7 @@
             :class="{'opacity-75 cursor-not-allowed': isLoading}"
           >
             <i class="fa fa-bar-chart mr-3 group-hover:scale-110 transition-transform duration-300"></i> 
-            <span v-if="!isLoading" class="text-lg">分析市场趋势与策略</span>
+            <span v-if="!isLoading" class="text-lg">分析基金趋势与策略</span>
             <span v-if="isLoading" class="flex items-center text-lg">
               <i class="fa fa-spinner fa-spin mr-3"></i> 加载中...
             </span>
@@ -152,13 +123,13 @@
         </div>
       </section>
 
-      <!-- 市场趋势概览 -->
+      <!-- 基金趋势概览 -->
       <section class="mb-10" v-if="showResults">
         <div class="bg-white rounded-xl shadow-sm p-6 md:p-8 ">
           <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
             <div>
               <h2 class="text-2xl font-bold" id="trend-title">
-                {{ currentMarketInfo.fullName }} ({{ formatDate(startDate) }}-{{ formatDate(endDate) }}) 市场趋势分析
+                {{ currentMarketInfo.fullName }} ({{ formatDate(startDate) }}-{{ formatDate(endDate) }}) 基金趋势分析
               </h2>
             </div>
             <div class="mt-4 md:mt-0 flex items-center space-x-4">
@@ -552,7 +523,7 @@
               <ul class="space-y-3 text-neutral">
                 <li class="flex">
                   <i class="fa fa-angle-right text-primary mt-1 mr-2"></i>
-                  <span>严格按照市场趋势切换策略，避免情绪干扰</span>
+                  <span>严格按照基金趋势切换策略，避免情绪干扰</span>
                 </li>
                 <li class="flex">
                   <i class="fa fa-angle-right text-primary mt-1 mr-2"></i>
@@ -560,7 +531,7 @@
                 </li>
                 <li class="flex">
                   <i class="fa fa-angle-right text-primary mt-1 mr-2"></i>
-                  <span>定期（每月）回顾市场趋势，确认策略适用性</span>
+                  <span>定期（每月）回顾基金趋势，确认策略适用性</span>
                 </li>
                 <li class="flex">
                   <i class="fa fa-angle-right text-primary mt-1 mr-2"></i>
@@ -568,7 +539,7 @@
                 </li>
                 <li class="flex">
                   <i class="fa fa-angle-right text-primary mt-1 mr-2"></i>
-                  <span>不同市场采用差异化策略参数（如黄金ETF波动阈值可提高）</span>
+                  <span>不同基金采用差异化策略参数（如黄金ETF波动阈值可提高）</span>
                 </li>
               </ul>
             </div>
@@ -604,7 +575,6 @@
           </div>
         </div>
       </section>
-    </main>
   </div>
 </template>
 
@@ -1016,6 +986,190 @@ onMounted(() => {
   });
 });
 
+const calculatePearsonCorrelation = (left, right) => {
+  if (left.length < 2 || left.length !== right.length) return 0;
+  const leftMean = left.reduce((sum, value) => sum + value, 0) / left.length;
+  const rightMean = right.reduce((sum, value) => sum + value, 0) / right.length;
+  let numerator = 0;
+  let leftVariance = 0;
+  let rightVariance = 0;
+  left.forEach((value, index) => {
+    const leftDelta = value - leftMean;
+    const rightDelta = right[index] - rightMean;
+    numerator += leftDelta * rightDelta;
+    leftVariance += leftDelta ** 2;
+    rightVariance += rightDelta ** 2;
+  });
+  const denominator = Math.sqrt(leftVariance * rightVariance);
+  return denominator ? numerator / denominator : 0;
+};
+
+const buildCorrelationMatrix = (fundReturns, fundCodes, dates) => {
+  return fundCodes.map(leftCode => fundCodes.map(rightCode => {
+    if (leftCode === rightCode) return 1;
+    return calculatePearsonCorrelation(
+      dates.map(date => fundReturns[leftCode].get(date)),
+      dates.map(date => fundReturns[rightCode].get(date))
+    );
+  }));
+};
+
+const averageOffDiagonal = (matrix) => {
+  const values = [];
+  matrix.forEach((row, rowIndex) => {
+    row.forEach((value, columnIndex) => {
+      if (columnIndex > rowIndex) values.push(value);
+    });
+  });
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+};
+
+const getCorrelationCellClass = (value) => {
+  if (value >= 0.7) return 'bg-bear/10 text-bear';
+  if (value <= 0.3) return 'bg-bull/10 text-bull';
+  return 'bg-volatile/10 text-volatile';
+};
+
+const classifyCorrelationTrend = (monthlyReturn) => {
+  if (monthlyReturn >= 0.005) return 'bull';
+  if (monthlyReturn <= -0.005) return 'bear';
+  return 'volatile';
+};
+
+const renderCorrelationChart = (trendCorrelations) => {
+  if (!correlationChartCanvas.value) return;
+  if (correlationChart.value) correlationChart.value.destroy();
+  const trendLabels = { bull: '牛市', bear: '熊市', volatile: '震荡市' };
+  const trendColors = { bull: '#00B42A', bear: '#F53F3F', volatile: '#FF7D00' };
+  correlationChart.value = new Chart(correlationChartCanvas.value, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(trendLabels).map(trend => trendLabels[trend]),
+      datasets: [{
+        label: '平均相关系数',
+        data: Object.keys(trendLabels).map(trend => trendCorrelations[trend]),
+        backgroundColor: Object.keys(trendLabels).map(trend => trendColors[trend]),
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { min: -1, max: 1, ticks: { callback: value => Number(value).toFixed(1) } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: context => `平均相关系数：${Number(context.raw).toFixed(2)}` } }
+      }
+    }
+  });
+};
+
+const analyzeFundCorrelation = async () => {
+  if (selectedCorrelationFunds.value.length < 2) {
+    alert('请至少选择两只基金');
+    return;
+  }
+  isCorrelationLoading.value = true;
+  try {
+    const selectedCodes = [...selectedCorrelationFunds.value];
+    const fundData = await Promise.all(selectedCodes.map(code =>
+      fetchMarketData(code, startDate.value, endDate.value)
+    ));
+    const validFunds = fundData.map((data, index) => ({
+      code: selectedCodes[index],
+      label: marketOptions.value.find(option => option.value === selectedCodes[index])?.label || selectedCodes[index],
+      data: Array.isArray(data?.dailySeries) ? data.dailySeries : []
+    })).filter(fund => fund.data.length >= 2);
+
+    if (validFunds.length < 2) {
+      throw new Error('所选基金的有效历史净值不足，无法计算相关性');
+    }
+
+    const fundReturns = {};
+    validFunds.forEach(fund => {
+      const returns = new Map();
+      for (let index = 1; index < fund.data.length; index += 1) {
+        const previous = Number(fund.data[index - 1].value);
+        const current = Number(fund.data[index].value);
+        if (fund.data[index].date && Number.isFinite(previous) && previous > 0 && Number.isFinite(current)) {
+          returns.set(fund.data[index].date, (current - previous) / previous);
+        }
+      }
+      fundReturns[fund.code] = returns;
+    });
+
+    const fundCodes = validFunds.map(fund => fund.code);
+    const dates = [...fundReturns[fundCodes[0]].keys()]
+      .filter(date => fundCodes.every(code => fundReturns[code].has(date)))
+      .sort();
+    if (dates.length < 10) {
+      throw new Error('所选基金的共同交易日不足 10 天，无法计算可靠的相关性');
+    }
+
+    const monthlyReturns = new Map();
+    dates.forEach(date => {
+      const month = date.slice(0, 7);
+      if (!monthlyReturns.has(month)) monthlyReturns.set(month, []);
+      monthlyReturns.get(month).push(
+        fundCodes.reduce((sum, code) => sum + fundReturns[code].get(date), 0) / fundCodes.length
+      );
+    });
+    const trendDates = { bull: [], bear: [], volatile: [] };
+    monthlyReturns.forEach((returns, month) => {
+      const average = returns.reduce((sum, value) => sum + value, 0) / returns.length;
+      trendDates[classifyCorrelationTrend(average)].push(...dates.filter(date => date.startsWith(month)));
+    });
+
+    const overallMatrix = buildCorrelationMatrix(fundReturns, fundCodes, dates);
+    const trendCorrelations = {};
+    Object.keys(trendDates).forEach(trend => {
+      const trendMatrix = trendDates[trend].length >= 2
+        ? buildCorrelationMatrix(fundReturns, fundCodes, trendDates[trend])
+        : overallMatrix;
+      trendCorrelations[trend] = averageOffDiagonal(trendMatrix);
+    });
+
+    const volatilities = fundCodes.map(code => {
+      const values = dates.map(date => fundReturns[code].get(date));
+      const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+      const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
+      return Math.sqrt(variance);
+    });
+    const inverseVolatility = volatilities.map(volatility => volatility > 0 ? 1 / volatility : 1);
+    const inverseVolatilityTotal = inverseVolatility.reduce((sum, value) => sum + value, 0);
+    const selectedFunds = validFunds.map((fund, index) => ({
+      code: fund.code,
+      label: fund.label,
+      shortLabel: fund.label.length > 8 ? fund.label.slice(0, 8) : fund.label,
+      weight: inverseVolatility[index] / inverseVolatilityTotal
+    }));
+    const overallAverage = averageOffDiagonal(overallMatrix);
+    const recommendation = overallAverage >= 0.7
+      ? '基金整体走势高度同步，建议加入债券、货币或黄金类低相关资产，避免组合风险过度集中。'
+      : overallAverage <= 0.3
+        ? '基金整体相关性较低，具备较好的分散效果，可按波动率倒数权重进行平衡配置。'
+        : '基金存在一定分散效果，建议以波动率倒数权重为基础，并结合风险承受能力微调。';
+
+    correlationResult.value = {
+      selectedFunds,
+      overallMatrix,
+      trendCorrelations,
+      sampleCount: dates.length,
+      recommendation
+    };
+    await nextTick();
+    renderCorrelationChart(trendCorrelations);
+  } catch (error) {
+    correlationResult.value = null;
+    alert(error instanceof Error ? error.message : '基金相关性分析失败，请稍后重试');
+    console.error('基金相关性分析失败', error);
+  } finally {
+    isCorrelationLoading.value = false;
+  }
+};
+
 // 格式化日期（支持 YYYY-MM 和 YYYY-MM-DD）
 const formatDate = (dateString) => {
   if (!dateString) return '';
@@ -1349,7 +1503,7 @@ const calculateReturns = () => {
 
   // 使用日序列计算按频率的定投结果
   if (!currentMarketInfo.value || !Array.isArray(currentMarketInfo.value.dailySeries)) {
-    alert('市场日度数据不可用，请先分析市场以加载数据');
+    alert('基金日度数据不可用，请先分析基金以加载数据');
     return;
   }
   
