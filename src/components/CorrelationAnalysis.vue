@@ -144,6 +144,36 @@
                   <p><span class="font-medium text-dark">计算逻辑：</span>先计算每只基金相邻交易日的收益率，再取所选基金的共同交易日作为样本，对每一对基金计算 Pearson 相关系数。</p>
                   <p class="mt-1"><span class="font-medium text-dark">Pearson 公式：</span><span class="font-mono">r<sub>xy</sub> = Σ[(x<sub>i</sub> - x̄)(y<sub>i</sub> - ȳ)] / √[Σ(x<sub>i</sub> - x̄)<sup>2</sup> × Σ(y<sub>i</sub> - ȳ)<sup>2</sup>]</span>，其中 x<sub>i</sub>、y<sub>i</sub> 是同一交易日的两只基金日收益率，x̄、ȳ 是各自的平均日收益率。</p>
                   <p class="mt-1">相关系数范围为 -1 至 1：越接近 1 表示同涨同跌越明显，越接近 -1 表示走势相反，接近 0 表示线性相关性较弱。整体判断使用相关系数矩阵非对角元素的平均值。</p>
+                  <div class="mt-4 border-t border-gray-100 pt-4">
+                    <p class="font-medium text-dark">相关系数解读：</p>
+                    <div class="mt-4">
+                      <div class="grid grid-cols-3 gap-1 text-center text-xs text-neutral">
+                        <span>低相关及负相关</span>
+                        <span>中等相关</span>
+                        <span>高度正相关</span>
+                      </div>
+                      <div class="relative mt-2 flex h-8 overflow-visible rounded-lg text-center text-xs font-medium text-white shadow-inner">
+                        <div class="flex w-[65%] items-center justify-center bg-bull">-1 至 +0.3</div>
+                        <div class="flex w-[20%] items-center justify-center bg-volatile">+0.3 至 +0.7</div>
+                        <div class="flex w-[15%] items-center justify-center bg-bear">+0.7 至 +1</div>
+                        <div
+                          class="absolute -top-12 z-10 -translate-x-1/2 whitespace-nowrap rounded-md border-2 bg-white px-3 py-1 text-lg font-bold shadow-md"
+                          :style="{ ...correlationMarkerStyle, color: correlationMarkerColor, borderColor: correlationMarkerColor }"
+                        >
+                          {{ overallCorrelation >= 0 ? '+' : '' }}{{ overallCorrelation.toFixed(2) }}
+                          <span
+                            class="absolute left-1/2 top-7 -translate-x-1/2 text-2xl font-black leading-none"
+                            :style="{ color: correlationMarkerColor }"
+                          >▼</span>
+                        </div>
+                      </div>
+                      <div class="relative mt-2 flex justify-between text-xs text-neutral">
+                        <span>-1（完全负相关）</span>
+                        <span class="absolute ml-[49%]">0（无相关）</span>
+                        <span>+1（完全相关）</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="rounded-xl border border-primary/10 bg-light/30 p-5">
@@ -202,6 +232,19 @@ const dropdownContainer = ref(null)
 const searchInput = ref(null)
 const isDropdownOpen = ref(false)
 const fundCodeInput = ref('')
+const overallCorrelation = computed(() => {
+  if (!result.value?.overallMatrix) return 0
+  const values = result.value.overallMatrix.flatMap((row, rowIndex) => row.filter((_, columnIndex) => columnIndex > rowIndex))
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0
+})
+const correlationMarkerStyle = computed(() => ({
+  left: `${Math.min(100, Math.max(0, (overallCorrelation.value + 1) * 50))}%`
+}))
+const correlationMarkerColor = computed(() => {
+  if (overallCorrelation.value >= 0.7) return '#F53F3F'
+  if (overallCorrelation.value <= 0.3) return '#00B42A'
+  return '#FF7D00'
+})
 
 const filteredMarketOptions = computed(() => {
   const searchTerm = fundCodeInput.value.trim().toLowerCase()
