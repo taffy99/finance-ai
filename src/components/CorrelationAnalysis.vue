@@ -39,7 +39,7 @@
               </button>
 
               <div
-                v-show="isDropdownOpen"
+                v-if="isDropdownOpen"
                 class="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg"
               >
                 <div class="border-b border-gray-100 p-2">
@@ -68,6 +68,12 @@
                       <span class="truncate">{{ option.label }}</span>
                     </label>
                     <span class="shrink-0 text-xs text-gray-500">{{ option.value }}</span>
+                  </li>
+                  <li
+                    v-if="matchingMarketOptions.length > filteredMarketOptions.length"
+                    class="px-2 py-2 text-sm text-gray-500"
+                  >
+                    仅显示前 {{ filteredMarketOptions.length }} 条，请输入基金代码或名称缩小范围
                   </li>
                   <li v-if="filteredMarketOptions.length === 0" class="px-2 py-2 text-gray-500">未找到匹配的基金</li>
                 </ul>
@@ -180,13 +186,13 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { Chart } from 'chart.js'
 import MonthPicker from './MonthPicker.vue'
 import { useMarketAnalysis } from '../composables/useMarketAnalysis.js'
 
 const { fetchMarketData, fetchMarkets } = useMarketAnalysis()
-const marketOptions = ref([])
+const marketOptions = shallowRef([])
 const selectedFunds = ref([])
 const result = ref(null)
 const isLoading = ref(false)
@@ -203,7 +209,7 @@ const searchInput = ref(null)
 const isDropdownOpen = ref(false)
 const fundCodeInput = ref('')
 
-const filteredMarketOptions = computed(() => {
+const matchingMarketOptions = computed(() => {
   const searchTerm = fundCodeInput.value.trim().toLowerCase()
   if (!searchTerm) return marketOptions.value
   return marketOptions.value.filter(option =>
@@ -211,6 +217,7 @@ const filteredMarketOptions = computed(() => {
     option.label.toLowerCase().includes(searchTerm)
   )
 })
+const filteredMarketOptions = computed(() => matchingMarketOptions.value.slice(0, 100))
 
 const selectedFundsLabel = computed(() => {
   const labels = selectedFunds.value

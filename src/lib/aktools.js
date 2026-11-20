@@ -14,6 +14,10 @@ const aktoolsClient = axios.create({
   }
 });
 
+let fundListCache;
+let hasFundListCache = false;
+let fundListRequest;
+
 aktoolsClient.interceptors.response.use(
   response => response.data,
   error => {
@@ -48,7 +52,27 @@ export const AkToolsAPI = {
   },
 
   getFundList(params = {}) {
-    return this.call('fund_name_em', params);
+    if (params && Object.keys(params).length > 0) {
+      return this.call('fund_name_em', params);
+    }
+
+    if (hasFundListCache) {
+      return Promise.resolve(fundListCache);
+    }
+
+    if (!fundListRequest) {
+      fundListRequest = this.call('fund_name_em', params)
+        .then(data => {
+          fundListCache = data;
+          hasFundListCache = true;
+          return data;
+        })
+        .finally(() => {
+          fundListRequest = null;
+        });
+    }
+
+    return fundListRequest;
   },
 
   getFundGradedInfo(symbol) {

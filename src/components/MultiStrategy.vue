@@ -34,8 +34,8 @@
               </div>
               
               <!-- 下拉菜单 -->
-              <div 
-                v-show="isDropdownOpen" 
+              <div
+                v-if="isDropdownOpen"
                 class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto"
               >
                 <!-- 搜索框 -->
@@ -61,6 +61,12 @@
                   >
                     <span>{{ option.label }}</span>
                     <span class="text-gray-500 text-sm">{{ option.value }}</span>
+                  </li>
+                  <li
+                    v-if="matchingMarketOptions.length > filteredMarketOptions.length"
+                    class="px-4 py-2 text-sm text-gray-500"
+                  >
+                    仅显示前 {{ filteredMarketOptions.length }} 条，请输入基金代码或名称缩小范围
                   </li>
                   <li v-if="filteredMarketOptions.length === 0" class="px-4 py-2 text-gray-500">
                     未找到匹配的基金
@@ -581,7 +587,7 @@
 
 
 <script setup>
-import { ref, onMounted, watch, nextTick, computed, onBeforeUnmount } from 'vue';
+import { ref, shallowRef, onMounted, watch, nextTick, computed, onBeforeUnmount } from 'vue';
 import { Chart, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import MonthPicker from './MonthPicker.vue';
@@ -631,17 +637,18 @@ const filteredTrends = ref([]);
 const dropdownContainer = ref(null);
 const isDropdownOpen = ref(false);
 // 计算属性：根据基金代码输入筛选市场选项
-const filteredMarketOptions = computed(() => {
+const matchingMarketOptions = computed(() => {
   if (!fundCodeInput.value) {
     return marketOptions.value;
   }
   
   const searchTerm = fundCodeInput.value.toLowerCase();
-  return marketOptions.value.filter(option => 
+  return marketOptions.value.filter(option =>
     option.value.toLowerCase().includes(searchTerm) || 
     option.label.toLowerCase().includes(searchTerm)
   );
 });
+const filteredMarketOptions = computed(() => matchingMarketOptions.value.slice(0, 100));
 // 计算属性：获取选中市场的标签
 const selectedMarketLabel = computed(() => {
   const selected = marketOptions.value.find(option => option.value === selectedMarket.value);
@@ -961,7 +968,7 @@ const loadMarketData = async (marketId, sDate, eDate) => {
     return currentMarketInfo.value;
   }
 };
-const marketOptions = ref([]);
+const marketOptions = shallowRef([]);
 // 添加清理事件监听器
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside);
