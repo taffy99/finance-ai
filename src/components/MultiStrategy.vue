@@ -264,34 +264,7 @@
                 
                 <div class="group">
                   <label class="block text-neutral mb-2 font-medium">
-                    <div class="flex items-center">
-                      <span>定投策略选择</span>
-                      <!-- tooltip wrapper: 使用 group 以便在 hover 时显示 tooltip -->
-                      <span class="relative inline-block ml-2 group">
-                        <i class="fa fa-info-circle text-neutral/500 group-hover:text-primary cursor-pointer" aria-hidden="true"></i>
-
-                        <!-- 优化后的自定义 tooltip：渐变背景、柔和阴影、淡入位移动画、整齐排版 -->
-                        <div class="pointer-events-none absolute left-1/2 transform -translate-x-1/2 top-full mt-3 max-w-xs w-80 bg-light text-neutral-900 text-sm p-3 rounded-lg shadow-md border border-gray-200 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 z-50">
-                          <!-- 箭头：与浅灰背景一致，使用轻边框 -->
-                          <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-light rotate-45 border-t border-l border-gray-200"></div>
-
-                          <div class="leading-relaxed text-sm">
-                            <div class="font-medium mb-2">策略说明</div>
-                            <ul class="list-disc ml-4 space-y-1 text-[13px] text-neutral-700">
-                              <li><span class="font-medium">普通定投（DCA）</span> — 按固定金额在每个期次买入，长期成本平均化。</li>
-                              <li><span class="font-medium">智能优化</span> — 根据价格波动动态调整投入，示例规则如下：</li>
-                            </ul>
-                            <div class="mt-2 text-[13px] text-neutral-600 pl-4">
-                              • 若本期相对上期下跌 ≥ 2%，则本期投入 = 基础投入 × 1.5（加仓）
-                            </div>
-                            <div class="mt-1 text-[13px] text-neutral-600 pl-4">
-                              • 若本期相对上期上涨 ≥ 2%，则本期投入 = 基础投入 × 0.7（减仓）
-                            </div>
-                            <div class="mt-2 text-xs text-neutral-500">提示：示例规则为演示用途，可后续扩展为可配置策略参数。</div>
-                          </div>
-                        </div>
-                      </span>
-                    </div>
+                    <span>定投策略选择</span>
                   </label>
                   <div class="grid grid-cols-2 gap-4">
                     <label class="flex items-center p-4 bg-light rounded-lg cursor-pointer hover:bg-light/70 transition-colors">
@@ -314,6 +287,53 @@
                       >
                       <span>智能优化定投</span>
                     </label>
+                  </div>
+                  <div v-if="selectedStrategy === 'normal'" class="mt-4 p-4 bg-light/70 rounded-lg border border-gray-100 text-sm text-neutral-700 leading-relaxed">
+                    <div class="font-medium mb-2 text-neutral-900">普通定投策略说明</div>
+                    <p>按设定的基础金额，在每个定投周期固定买入，不根据市场涨跌调整投入金额，适合长期坚持和分散择时风险。</p>
+                  </div>
+                  <div v-if="selectedStrategy === 'optimized'" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-bull/5 border border-bull/20 rounded-lg">
+                      <div class="font-medium text-bull mb-3">下跌 → 加仓</div>
+                      <div class="grid grid-cols-2 gap-3">
+                        <label class="block text-sm text-neutral">
+                          <span class="block mb-1">下跌触发阈值（%）</span>
+                          <input v-model.number="downThreshold" type="number" min="0.01" max="100" step="0.1"
+                            class="w-full bg-white border border-gray-200 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        </label>
+                        <label class="block text-sm text-neutral">
+                          <span class="block mb-1">加仓比例（%）</span>
+                          <input v-model.number="increasePercent" type="number" min="0" max="100" step="1"
+                            class="w-full bg-white border border-gray-200 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        </label>
+                      </div>
+                    </div>
+                    <div class="p-4 bg-bear/5 border border-bear/20 rounded-lg">
+                      <div class="font-medium text-bear mb-3">上涨 → 减仓</div>
+                      <div class="grid grid-cols-2 gap-3">
+                        <label class="block text-sm text-neutral">
+                          <span class="block mb-1">上涨触发阈值（%）</span>
+                          <input v-model.number="upThreshold" type="number" min="0.01" max="100" step="0.1"
+                            class="w-full bg-white border border-gray-200 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        </label>
+                        <label class="block text-sm text-neutral">
+                          <span class="block mb-1">减仓比例（%）</span>
+                          <input v-model.number="decreasePercent" type="number" min="0" max="100" step="1"
+                            class="w-full bg-white border border-gray-200 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="selectedStrategy === 'optimized'" class="mt-4 p-4 bg-light/70 rounded-lg border border-gray-100 text-sm text-neutral-700 leading-relaxed">
+                    <div class="font-medium mb-2 text-neutral-900">智能优化定投策略说明</div>
+                    <p>根据本期相对上期的价格变化动态调整投入金额：</p>
+                    <div class="mt-2 pl-4">
+                      • 下跌达到 {{ downThreshold }}% 时，本期投入增加 {{ increasePercent }}%
+                    </div>
+                    <div class="mt-1 pl-4">
+                      • 上涨达到 {{ upThreshold }}% 时，本期投入减少 {{ decreasePercent }}%
+                    </div>
+                    <div class="mt-2 text-xs text-neutral-500">以上参数会同时应用于收益计算、预警提示和策略回测。</div>
                   </div>
                 </div>
 
@@ -648,11 +668,15 @@ const selectedMarketLabel = computed(() => {
   return selected ? selected.label : '';
 });
 // 定投计算器状态
-const monthlyInvestment = ref(1000);
-const targetAmount = ref(100000); // 添加这行：定投目标金额
+const monthlyInvestment = ref(100);
+const targetAmount = ref(10000); // 定投目标金额
 const calculatorStartDate = ref('2020-01-01');
 const calculatorEndDate = ref('2024-12-31');
 const selectedStrategy = ref('optimized');
+const downThreshold = ref(2);
+const upThreshold = ref(2);
+const increasePercent = ref(50);
+const decreasePercent = ref(30);
 // 定投频率：'weekly' | 'biweekly' | 'monthly'
 const contributionFrequency = ref('weekly');
 const showCalculationResults = ref(false);
@@ -730,7 +754,19 @@ const getPriceNearest = (dateStr) => {
 };
 
 // 模拟定投（支持按周/双周/每月），返回统计结果和序列
-const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyType) => {
+const getStrategyParameters = () => ({
+  downThreshold: Number(downThreshold.value) / 100,
+  upThreshold: Number(upThreshold.value) / 100,
+  increaseMultiplier: 1 + Number(increasePercent.value) / 100,
+  decreaseMultiplier: 1 - Number(decreasePercent.value) / 100
+});
+
+const strategyParametersAreValid = () => [
+  downThreshold.value, upThreshold.value, increasePercent.value, decreasePercent.value
+].every(value => Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100)
+  && Number(downThreshold.value) > 0 && Number(upThreshold.value) > 0;
+
+const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyType, strategyParams = getStrategyParameters()) => {
   const schedule = buildScheduleDates(startStr, endStr, freq);
   if (!schedule.length) return null;
   const seriesPrices = schedule.map(d => ({ date: d, price: getPriceNearest(d) }));
@@ -765,7 +801,12 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
     });
     // 根据定投频率确定对比期数和描述
     let periodDescription = '';
-    let changeThresholds = { medium: 0.02, strong: 0.05 };
+    const changeThresholds = {
+      down: strategyParams.downThreshold,
+      up: strategyParams.upThreshold,
+      strongDown: strategyParams.downThreshold * 2,
+      strongUp: strategyParams.upThreshold * 2
+    };
   
     // 根据定投频率设置参数和对比周期
     if (freq === 'weekly') {
@@ -778,22 +819,22 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
       periodDescription = '上月';
     }
     // 根据价格变化生成预警建议
-    if (periodChange <= -changeThresholds.medium) {
+    if (periodChange <= -changeThresholds.down) {
       // 下跌预警 - 建议加仓
       alertInfo = {
         type: 'increase',
-        level: periodChange <= -changeThresholds.strong ? 'strong' : periodChange <= -changeThresholds.medium ? 'medium' : 'weak',
-        amount: amountPerPeriod * 1.5,
+        level: periodChange <= -changeThresholds.strongDown ? 'strong' : 'medium',
+        amount: amountPerPeriod * strategyParams.increaseMultiplier,
         reason: `${periodDescription}下跌${(periodChange * 100).toFixed(3)}%`,
         currentPrice: latestPrice,
         prevPrice: prevPrice
       };
-    } else if (periodChange >= changeThresholds.medium) {
+    } else if (periodChange >= changeThresholds.up) {
       // 上涨预警 - 建议减仓
       alertInfo = {
         type: 'decrease',
-        level: periodChange >= changeThresholds.strong ? 'strong' : periodChange >= changeThresholds.medium ? 'medium' : 'weak',
-        amount: amountPerPeriod * 0.7,
+        level: periodChange >= changeThresholds.strongUp ? 'strong' : 'medium',
+        amount: amountPerPeriod * strategyParams.decreaseMultiplier,
         reason: `${periodDescription}上涨${(periodChange * 100).toFixed(3)}%`,
         currentPrice: latestPrice,
         prevPrice: prevPrice
@@ -824,8 +865,8 @@ const simulateInvestment = (startStr, endStr, freq, amountPerPeriod, strategyTyp
     if (i > 0) {
       const prev = valid[i - 1].price;
       const pct = (price - prev) / prev;
-      if (pct <= -0.02) multiplier = 1.5;
-      else if (pct >= 0.02) multiplier = 0.7;
+      if (pct <= -strategyParams.downThreshold) multiplier = strategyParams.increaseMultiplier;
+      else if (pct >= strategyParams.upThreshold) multiplier = strategyParams.decreaseMultiplier;
     }
     const investOpt = (Number(amountPerPeriod) || 0) * multiplier;
     const sharesOpt = investOpt / price;
@@ -1500,6 +1541,10 @@ const calculateReturns = () => {
     alert('开始日期不能晚于结束日期');
     return;
   }
+  if (!strategyParametersAreValid()) {
+    alert('策略参数必须填写有效的百分比：阈值需大于 0，加仓和减仓比例需在 0% 至 100% 之间');
+    return;
+  }
 
   // 使用日序列计算按频率的定投结果
   if (!currentMarketInfo.value || !Array.isArray(currentMarketInfo.value.dailySeries)) {
@@ -1512,7 +1557,8 @@ const calculateReturns = () => {
     calculatorEndDate.value,
     contributionFrequency.value,
     monthlyInvestment.value,
-    selectedStrategy.value
+    selectedStrategy.value,
+    getStrategyParameters()
   );
 
   if (!sim) {
@@ -1556,7 +1602,7 @@ const calculateReturns = () => {
 };
 
 // 当用户切换定投频率或定投策略时，若当前已显示计算结果则自动刷新计算
-watch([contributionFrequency, selectedStrategy], () => {
+watch([contributionFrequency, selectedStrategy, downThreshold, upThreshold, increasePercent, decreasePercent], () => {
   if (showCalculationResults.value) {
     // 重新计算收益，保持交互即时响应
     try {
@@ -1604,8 +1650,8 @@ const generateBacktestData = () => {
   let normalTotalShares = 0;
   let normalTotalInvested = 0;
 
-  // 优化定投：基于简单的价格变动规则动态调整当月投入
-  // 规则示例：本月相对上月下跌 >=2% => 加仓 1.5x；上涨 >=2% => 减仓 0.7x；否则 1x
+  // 优化定投：基于用户配置的价格变动规则动态调整当月投入
+  const strategyParams = getStrategyParameters();
   const optimizedValueSeries = [];
   let optimizedTotalShares = 0;
   let optimizedTotalInvested = 0;
@@ -1625,8 +1671,8 @@ const generateBacktestData = () => {
     if (i > 0) {
       const prev = priceSeries[i - 1];
       const pct = (price - prev) / prev;
-      if (pct <= -0.02) multiplier = 1.5; // 跌幅>=2%加仓
-      else if (pct >= 0.02) multiplier = 0.7; // 涨幅>=2%减少投入
+      if (pct <= -strategyParams.downThreshold) multiplier = strategyParams.increaseMultiplier;
+      else if (pct >= strategyParams.upThreshold) multiplier = strategyParams.decreaseMultiplier;
     }
     const investOpt = monthlyAmt * multiplier;
     const sharesBoughtOpt = investOpt / price;
