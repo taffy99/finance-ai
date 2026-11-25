@@ -43,3 +43,11 @@
     </main>
   </div>
 </template>
+
+<script setup>
+import { MarketAPI } from '../lib/api.js';
+
+void MarketAPI.getMarkets().catch(error => {
+  console.error('[FundAnalysis] Failed to preload fund list', error);
+});
+</script>
